@@ -1,7 +1,7 @@
 {
-  "name": "gltf-sample-viewer-example",
+  "name": "gltf-compressor",
   "version": "1.0.0",
-  "description": "The official glTF sample viewer example.",
+  "description": "The official glTF-Compressor.",
   "main": "src/main.js",
   "module": "src/main.js",
   "scripts": {
@@ -14,14 +14,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/KhronosGroup/glTF-Sample-Viewer.git"
+    "url": "git+https://github.com/KhronosGroup/glTF-Compressor.git"
   },
   "keywords": [
     "gltf",
     "webgl",
     "pbr"
   ],
-  "author": "Khronos Group Inc.",
+  "author": "Phasmatic P.C.",
   "license": "Apache-2.0",
   "dependencies": {
     "@khronosgroup/gltf-viewer": "..",
@@ -57,7 +57,7 @@
     "serve": "^14.0.1"
   },
   "bugs": {
-    "url": "https://github.com/KhronosGroup/glTF-Sample-Viewer/issues"
+    "url": "https://github.com/KhronosGroup/glTF-Compressor/issues"
   },
-  "homepage": "https://github.com/KhronosGroup/glTF-Sample-Viewer/#readme"
+  "homepage": "https://github.com/KhronosGroup/glTF-Compressor#readme"
 }
