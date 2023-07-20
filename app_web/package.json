@@ -21,7 +21,7 @@
     "webgl",
     "pbr"
   ],
-  "author": "Phasmatic P.C.",
+  "author": "Khronos Group Inc.",
   "license": "Apache-2.0",
   "dependencies": {
     "@khronosgroup/gltf-viewer": "..",

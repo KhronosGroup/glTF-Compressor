@@ -90,8 +90,8 @@ const app = new Vue({
         'addEnvironment$', 'colorChanged$', 'environmentRotationChanged$', 'animationPlayChanged$', 'selectedAnimationsChanged$',
         'variantChanged$', 'exposureChanged$', "clearcoatChanged$", "sheenChanged$", "transmissionChanged$",
         'cameraExport$', 'captureCanvas$','iblIntensityChanged$', 'comparisonViewChanged$',
-        'texturesSelectionChanged$', 'compressionSelectionChanged$', 'compressionEncodingSelectionChanged$', 'compressionResolutionSelectionChanged$',
-        'compressedUASTC_FlagsChanged$', 'compressedUASTC_RdoChanged$', 'compressedUASTC_Rdo_DonotFavorSimplerModesChanged$',
+        'texturesSelectionChanged$', 'compressionSelectionChanged$', 'compressionUASTC_Rdo_AlgorithmSelectionChanged$', 'compressionEncodingSelectionChanged$', 'compressionResolutionSelectionChanged$',
+        'compressedUASTC_FlagsChanged$', 'compressedUASTC_RdoChanged$', 'compressionUASTC_Rdo_LevelChanged$', 'compressedUASTC_Rdo_DonotFavorSimplerModesChanged$',
         'compressionETC1S_CompressionLevelChanged$', 'compressionETC1S_QualityLevelChanged$', 'compressionETC1S_MaxEndPointsChanged$', 
         'compressionETC1S_EndpointRdoThresholdChanged$', 'compressionETC1S_MaxSelectorsChanged$', 'compressionETC1S_SelectorRdoThresholdChanged$',
         'compressionETC1S_NoEndpointRdoChanged$', 'compressionETC1S_NoSelectorRdoChanged$',
@@ -144,9 +144,16 @@ const app = new Vue({
             compressionQualityWEBP: 80.0,
             previewImageSlider: 0.5,
 
+            compressionBefore: "Before",
+            compressionAfter: "After",
+
+            compressionUASTC_Rdo_Algorithms: [{title: "Zstd"}, {title: "Zlib"}],
             compressionUASTC_Flags: [{title: "FASTEST"}, {title: "FASTER"}, {title: "DEFAULT"}, {title: "SLOWER"}, {title: "SLOWEST"}],
             selectedCompressionUASTC_Flags: "DEFAULT",
             selectedCompressionUASTC_Rdo: false,
+            selectedCompressionUASTC_Rdo_Algorithm: "Zstd",
+            
+            selectedCompressionUASTC_Rdo_Level: 18,
             selectedCompressionUASTC_Rdo_QualityScalar: 1.0,
             selectedCompressionUASTC_Rdo_DictionarySize: 4096,
             selectedCompressionUASTC_Rdo_MaxSmoothBlockErrorScale: 10.0,
@@ -163,6 +170,7 @@ const app = new Vue({
             selectedCompressionETC1S_NoSelectorRdo: false,
 
             progressValue: 5,
+            scrollIntoView: false,
 
             selectedModel: "DamagedHelmet",
             selectedFlavour: "",
@@ -223,6 +231,12 @@ const app = new Vue({
             for(let i=0; i<this.texturesStatistics.length; i++)        
                 document.getElementById('container_img_' + i).appendChild(this.texturesStatistics[i].img);
         }
+        
+        var divObj = document.getElementById("targetElement");
+        if(divObj && this.scrollIntoView){
+            this.scrollIntoView = false;
+            divObj.scrollIntoView({ behavior: 'smooth' });
+        }      
     },
     mounted: function()
     {
@@ -243,7 +257,7 @@ const app = new Vue({
             // Code that will run only after the
             // entire view has been rendered
             var a = document.createElement('a');
-            a.href = "https://github.com/KhronosGroup/glTF-Sample-Viewer";
+            a.href = "https://github.com/KhronosGroup/glTF-Compressor";
             var img = document.createElement('img');
             img.src ="assets/ui/GitHub-Mark-Light-32px.png";
             img.style.width = "22px";

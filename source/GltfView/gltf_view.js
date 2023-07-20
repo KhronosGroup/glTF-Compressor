@@ -340,11 +340,13 @@ class GltfView
                 name: name, 
                 type: element.imageType,
                 usage: Array.from(element.imageUsage).join(", "),
-                format: element.mimeType.replace("image/", ""), 
+                format: element.mimeType.replace("image/", ""),
+                gpuformat: element.gpuFormat, 
                 resolution:  element.image.width + "x" + element.image.height, 
                 diskSize: fileSize.toFixed(2) + "mb", 
                 gpuSize: toMb(element.gpuSize).toFixed(2) + "mb", 
                 formatCompressed: "", 
+                gpuformatCompressed: "", 
                 resolutionCompressed: "",
                 diskSizeCompressed: "", 
                 gpuSizeCompressed: "",
@@ -412,15 +414,31 @@ class GltfView
                 type: element.imageType,
                 usage: Array.from(element.imageUsage).join(", "),
                 format: element.mimeType.replace("image/", ""), 
+                gpuformat: element.gpuFormat, 
                 resolution:  element.image.width + "x" + element.image.height, 
                 diskSize: fileSize.toFixed(2) + "mb", 
                 gpuSize: toMb(element.gpuSize).toFixed(2) + "mb", 
                 formatCompressed: isIncluded ? element.compressedMimeType.replace("image/", "") : "", 
+                gpuformatCompressed: isIncluded ?  element.compressedGpuFormat : "", 
                 resolutionCompressed: isIncluded ? element.compressedImage.width + "x" + element.compressedImage.height : "",
                 diskSizeCompressed: isIncluded ? fileSizeCompressed.toFixed(2) + "mb" : "",  
                 gpuSizeCompressed: isIncluded ? toMb(element.compressedGpuSize).toFixed(2) + "mb" : "", 
                 isCompleted: isIncluded
             };
+
+            if(texture.formatCompressed === "ktx2")
+            {
+                texture.formatCompressed += " + " + state.compressorParameters.compressionEncoding;
+                if(state.compressorParameters.compressionEncoding === "UASTC")
+                {
+                    if(state.compressorParameters.compressionUASTC_Rdo)
+                        texture.formatCompressed += " + RDO";
+                    texture.formatCompressed += " + " + state.compressorParameters.compressionUASTC_Rdo_Algorithm; 
+                }
+                else {
+                    texture.formatCompressed += " + BasisLZ";
+                }
+            }
 
             textures.push(texture);
             texturesFileSize += isIncluded ? fileSizeCompressed : fileSize;

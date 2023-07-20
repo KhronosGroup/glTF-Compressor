@@ -121,6 +121,8 @@ class GltfState
             /** Set the compression quality KTX2 - UASTC */
             compressionUASTC_Flags: "DEFAULT",
             compressionUASTC_Rdo: false,
+            compressionUASTC_Rdo_Algorithm: "Zstd",
+            compressionUASTC_Rdo_Level: 18,
             compressionUASTC_Rdo_QualityScalar: 1.0,
             compressionUASTC_Rdo_DictionarySize: 4096,
             compressionUASTC_Rdo_MaxSmoothBlockErrorScale: 10.0,

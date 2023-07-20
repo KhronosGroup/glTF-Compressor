@@ -23,6 +23,7 @@ class ImagePreviewRenderer
         {
             return;
         }
+        const aspectRatio = state._view.context.drawingBufferWidth / state._view.context.drawingBufferHeight;
 
         const gl = webGl.context;
 
@@ -50,6 +51,11 @@ class ImagePreviewRenderer
             return; // skip this material
         }
         gl.bindSampler(0, this.sampler);
+
+        const linearColor_loc = gl.getUniformLocation(shader.program,"u_linearColor");
+        gl.uniform1i(linearColor_loc, info.linear);
+        const aspectRatio_loc = gl.getUniformLocation(shader.program,"u_aspectRatio");
+        gl.uniform1f(aspectRatio_loc, aspectRatio);
 
         // fullscreen triangle
         gl.drawArrays(gl.TRIANGLES, 0, 3);

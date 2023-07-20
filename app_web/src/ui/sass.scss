@@ -267,9 +267,23 @@ div .field.has-addons
     width: auto;
 }
 
-.b-slider-tick-label
+.b-slider.comparisonImageSlider .b-slider-track {
+    height: 0px;
+}
+
+.b-slider .b-slider-tick-label
 {
-    margin-top: 8px;
+    width: max-content;
+}
+
+.b-slider .b-slider-tick 
+{
+    background: none;
+}
+
+.b-slider.comparisonImageSlider .b-slider-thumb
+{
+    width:  2px;
 }
 
 .b-slider.iblIntensitySlider
@@ -283,9 +297,9 @@ div .field.has-addons
 .b-slider.comparisonImageSlider
 {    
     position: relative;
-    bottom: 5%;
-    left: 2.5%;
-    width: 95%;
+    bottom: 50%;
+    width: 100%;
+    z-index: 999;
 }
 
 /* buttons */
@@ -437,6 +451,7 @@ input[type="checkbox"] {
     top: 30px;
     bottom: 0;
     box-shadow: 0 3px 10px rgb(0 0 0 / 0.2);
+    background: black;
   }
 
   .container table {
