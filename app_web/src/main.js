@@ -303,6 +303,10 @@ async function main()
         state.compressorParameters.compressionQualityWEBP = compressionQualityWEBP;
     });
 
+    uiModel.compressionUASTC_Rdo_Algorithm.subscribe( compressionUASTC_Rdo_Algorithm => {
+        state.compressorParameters.compressionUASTC_Rdo_Algorithm = compressionUASTC_Rdo_Algorithm;
+    });
+
     uiModel.compressionEncoding.subscribe( compressionEncoding => {
         state.compressorParameters.compressionEncoding = compressionEncoding;
     });
@@ -313,6 +317,10 @@ async function main()
 
     uiModel.compressionUASTC_Rdo.subscribe( compressionUASTC_Rdo => {
         state.compressorParameters.compressionUASTC_Rdo = compressionUASTC_Rdo;
+    });
+
+    uiModel.compressionUASTC_Rdo_Level.subscribe( compressionUASTC_Rdo_Level => {
+        state.compressorParameters.compressionUASTC_Rdo_Level = compressionUASTC_Rdo_Level;
     });
 
     uiModel.compressionUASTC_Rdo_QualityScalar.subscribe( compressionUASTC_Rdo_QualityScalar => {
@@ -381,6 +389,8 @@ async function main()
             state.compressorParameters.previewTextureIndex = index;
             state.compressorParameters.previewTextureZoom = {left: 0, right: 1, bottom: 0, top: 1};
         }
+
+        uiModel.updateSlider(index, state.compressorParameters.previewMode);
     });
     listenForRedraw(uiModel.comparisonViewMode);
 
@@ -392,7 +402,7 @@ async function main()
     listenForRedraw(uiModel.compressedPreviewMode);
     // preview slider
     uiModel.previewImageSlider.subscribe( previewImageSlider => {
-        state.compressorParameters.sliderPosition = previewImageSlider;
+        state.compressorParameters.sliderPosition = previewImageSlider;        
     });
     listenForRedraw(uiModel.previewImageSlider);
     // Compress textures
@@ -420,6 +430,8 @@ async function main()
             const targetKTX2_encoding = state.compressorParameters.compressionEncoding;
             const targetKTX2_UASTC_flags = state.compressorParameters.compressionUASTC_Flags;
             const targetKTX2_UASTC_RDO = state.compressorParameters.compressionUASTC_Rdo;
+            const targetKTX2_UASTC_RDO_algorithm = state.compressorParameters.compressionUASTC_Rdo_Algorithm;
+            const targetKTX2_UASTC_RDO_level = state.compressorParameters.compressionUASTC_Rdo_Level; 
             const targetKTX2_UASTC_RDO_quality = state.compressorParameters.compressionUASTC_Rdo_QualityScalar;
             const targetKTX2_UASTC_RDO_dictionarySize = state.compressorParameters.compressionUASTC_Rdo_DictionarySize;
             const targetKTX2_UASTC_RDO_maxSmoothBlockErrorScale = state.compressorParameters.compressionUASTC_Rdo_MaxSmoothBlockErrorScale;
@@ -451,7 +463,7 @@ async function main()
             basisu_options.noEndpointRDO = targetKTX2_ETC1S_noEndpointRdo;
             basisu_options.noSelectorRDO = targetKTX2_ETC1S_noSelectorRdo;
 
-            basisu_options.uastcFlags =  state.gltf.ktxEncoder.stringToUastcFlags(targetKTX2_UASTC_flags);
+            basisu_options.uastcFlags = state.gltf.ktxEncoder.stringToUastcFlags(targetKTX2_UASTC_flags);
             basisu_options.uastcRDO = targetKTX2_UASTC_RDO;
             basisu_options.uastcRDOQualityScalar = targetKTX2_UASTC_RDO_quality;
             basisu_options.uastcRDODictSize = targetKTX2_UASTC_RDO_dictionarySize;
@@ -459,6 +471,11 @@ async function main()
             basisu_options.uastcRDOMaxSmoothBlockStdDev = targetKTX2_UASTC_RDO_maxSmoothBlockStandardDeviation;
             basisu_options.uastcRDODontFavorSimplerModes = targetKTX2_UASTC_RDO_donotFavorSimplerModes;
             
+            if (basisu_options.uastc && targetKTX2_UASTC_RDO) {
+                options.supercmp_scheme = state.gltf.ktxEncoder.stringToSupercmpScheme(targetKTX2_UASTC_RDO_algorithm);
+                options.compression_level = targetKTX2_UASTC_RDO_level;
+            }
+
             options.basisu_options = basisu_options;
         }
         else if(state.compressorParameters.compressionType === "JPEG"){
@@ -829,9 +846,11 @@ async function main()
         state.compressorParameters.compressionQualityWEBP = 80.0;
 
         state.compressorParameters.compressionEncoding = "UASTC";
+        state.compressorParameters.compressionUASTC_Rdo_Algorithm = "Zstd";
 
         state.compressorParameters.compressionUASTC_Flags = "DEFAULT";
         state.compressorParameters.compressionUASTC_Rdo = false;
+        state.compressorParameters.compressionUASTC_Rdo_Level = 18;
         state.compressorParameters.compressionUASTC_Rdo_QualityScalar = 1.0;
         state.compressorParameters.compressionUASTC_Rdo_DictionarySize = 4096;
         state.compressorParameters.compressionUASTC_Rdo_MaxSmoothBlockErrorScale = 10.0;
@@ -1027,6 +1046,10 @@ async function main()
         past.height = canvas.height;
         
         if (redraw) {
+
+            const imageSlider = document.getElementById('imageSlider');
+            if(imageSlider !== null)
+                imageSlider.firstChild.childNodes[5].firstChild.childNodes[1].firstChild.style.height = canvas.height + "px";
             view.renderFrame(state, canvas.width, canvas.height);
             redraw = false;
         }

@@ -31,11 +31,13 @@ class gltfImage extends GltfObject
         // GSV-KTX (non gltf)
         this.fileSize = 0;
         this.gpuSize = 0;
+        this.gpuFormat = "RGBA8888";
         this.thumbnail = undefined;
         this.imageType = ImageType.COLOR;
         this.imageUsage = new Set();
         this.compressedFileSize = 0;
         this.compressedGpuSize = 0;        
+        this.compressedGpuFormat = "RGBA8888";
         this.compressedMimeType = mimeType;
         this.compressedImage = undefined;
         //this.compressedImageBlob = undefined;
@@ -107,6 +109,7 @@ class gltfImage extends GltfObject
                 this.image = await gltf.ktxDecoder.loadKtxFromBuffer(new Uint8Array(array));
                 this.fileSize = array.byteLength;
                 this.gpuSize = this.image.gpuSize;
+                this.gpuFormat = this.image.gpuFormat;
 
                 // Compressed image (just a copy of original)
                 this.compressedMimeType = ImageMimeType.KTX2;
@@ -114,13 +117,15 @@ class gltfImage extends GltfObject
                 this.compressedImageTypedArrayBuffer = new Uint8Array(array);
                 this.compressedFileSize = this.fileSize;
                 this.compressedGpuSize = this.compressedImage.gpuSize;
+                this.compressedGpuFormat = this.compressedImage.gpuFormat;
                 this.compressedTextureNeedUpdate = true;
 
                 // thumbnail
                 const gl = GL;
-                const downscaled_width = Math.min(this.image.width, 98);
+                const aspect_ratio = this.image.width / this.image.height;
+                const downscaled_width = Math.min(this.image.width, 98 * aspect_ratio);
                 const downscaled_height = Math.min(this.image.height, 98);
-                const raw_data = await ImageUtils.loadImageDataGL(this.image, downscaled_width, downscaled_height, gl, this.imageType === ImageType.COLOR);
+                const raw_data = await ImageUtils.loadImageDataGL(this.image, downscaled_width, downscaled_height, gl, this.image.isSRGB);
                 const image_data = new ImageData(raw_data, downscaled_width, downscaled_height);
                 const canvas    = document.createElement("canvas");
                 const context   = canvas.getContext("2d");
@@ -158,6 +163,7 @@ class gltfImage extends GltfObject
             });
             this.gpuSize = this.image.width * this.image.height * 4;
             this.gpuSize = Math.floor(this.gpuSize * 4 / 3 );
+            this.gpuFormat = "RGBA8888";
 
             // Compressed image (just a copy of original)
             this.compressedMimeType = this.mimeType;
@@ -167,6 +173,7 @@ class gltfImage extends GltfObject
             this.compressedImageTypedArrayBuffer = new Uint8Array(await blob.arrayBuffer());
             this.compressedFileSize = this.fileSize;
             this.compressedGpuSize = this.gpuSize;
+            this.compressedGpuFormat = this.gpuFormat;
             this.compressedTextureNeedUpdate = true;
 
             // thumbnail
@@ -182,12 +189,14 @@ class gltfImage extends GltfObject
             this.fileSize = this.uri.byteLength;
             this.gpuSize = this.image.width * this.image.height * 4;
             this.gpuSize = Math.floor(this.gpuSize * 4 / 3 );
+            this.gpuFormat = "RGBA8888";
 
             // compressed image
             this.compressedImage = {width: this.image.width, height: this.image.height, data: new Uint8Array(this.image.data)};
             this.compressedImageTypedArrayBuffer = new Uint8Array(this.uri);
             this.compressedFileSize = this.fileSize;
             this.compressedGpuSize = this.gpuSize;
+            this.compressedGpuFormat = this.gpuFormat;
             this.compressedTextureNeedUpdate = true;
 
             // thumbnail
@@ -201,6 +210,7 @@ class gltfImage extends GltfObject
             this.fileSize = this.uri.byteLength;
             this.gpuSize = this.image.width * this.image.height * 4; // images are stored as RGBA in GPU
             this.gpuSize = Math.floor(this.gpuSize * 4 / 3 );
+            this.gpuFormat = "RGBA8888";
 
             // compressed image
             this.compressedImage = {
@@ -213,6 +223,7 @@ class gltfImage extends GltfObject
             this.compressedImageTypedArrayBuffer = new Uint8Array(this.uri);
             this.compressedFileSize = this.fileSize;
             this.compressedGpuSize = this.gpuSize;
+            this.compressedGpuFormat = this.gpuFormat;
             this.compressedTextureNeedUpdate = true;
 
             // thumbnail
@@ -229,6 +240,7 @@ class gltfImage extends GltfObject
                 this.fileSize = array.byteLength;
                 this.gpuSize = this.image.width * this.image.height * 4;
                 this.gpuSize = Math.floor(this.gpuSize * 4 / 3 );
+                this.gpuFormat = "RGBA8888";
 
                 // Compressed image (just a copy of original)
                 this.compressedMimeType = ImageMimeType.WEBP;
@@ -236,6 +248,7 @@ class gltfImage extends GltfObject
                 this.compressedImageTypedArrayBuffer = new Uint8Array(array);
                 this.compressedFileSize = this.fileSize;
                 this.compressedGpuSize = this.gpuSize;
+                this.compressedGpuFormat = this.gpuFormat;
                 this.compressedTextureNeedUpdate = true;
 
                 // thumbnail
@@ -278,6 +291,7 @@ class gltfImage extends GltfObject
                 this.image = await gltf.ktxDecoder.loadKtxFromBuffer(array);
                 this.fileSize = array.byteLength;
                 this.gpuSize = this.image.gpuSize;
+                this.gpuFormat = this.image.gpuFormat;
 
                 // Compressed image (just a copy of original)
                 this.compressedMimeType = ImageMimeType.KTX2;
@@ -285,13 +299,15 @@ class gltfImage extends GltfObject
                 this.compressedImageTypedArrayBuffer = array;
                 this.compressedFileSize = this.fileSize;
                 this.compressedGpuSize = this.compressedImage.gpuSize;
+                this.compressedGpuFormat = this.compressedImage.gpuFormat;
                 this.compressedTextureNeedUpdate = true;
 
                 // thumbnail
                 const gl = GL;
-                const downscaled_width = Math.min(this.image.width, 98);
+                const aspect_ratio = this.image.width / this.image.height;
+                const downscaled_width = Math.min(this.image.width, 98 * aspect_ratio);
                 const downscaled_height = Math.min(this.image.height, 98);
-                const raw_data = await ImageUtils.loadImageDataGL(this.image, downscaled_width, downscaled_height, gl, this.imageType === ImageType.COLOR);
+                const raw_data = await ImageUtils.loadImageDataGL(this.image, downscaled_width, downscaled_height, gl, this.image.isSRGB);
                 const image_data = new ImageData(raw_data, downscaled_width, downscaled_height);
                 const canvas    = document.createElement("canvas");
                 const context   = canvas.getContext("2d");
@@ -326,6 +342,7 @@ class gltfImage extends GltfObject
             });
             this.gpuSize = this.image.width * this.image.height * 4;
             this.gpuSize = Math.floor(this.gpuSize * 4 / 3 );
+            this.gpuFormat = "RGBA8888";
 
             // Compressed image (just a copy of original)
             this.compressedImage = await gltfImage.loadHTMLImage(objectURL).catch( (error) => {
@@ -333,6 +350,7 @@ class gltfImage extends GltfObject
             });         
             this.compressedImageTypedArrayBuffer = new Uint8Array(array);   
             this.compressedGpuSize = this.gpuSize;
+            this.compressedGpuFormat = this.gpuFormat;
             this.compressedTextureNeedUpdate = true;
 
             // thumbnail
@@ -347,11 +365,13 @@ class gltfImage extends GltfObject
             this.image = jpeg.decode(array, {useTArray: true});
             this.gpuSize = this.image.width * this.image.height * 4;
             this.gpuSize = Math.floor(this.gpuSize * 4 / 3 );
-            
+            this.gpuFormat = "RGBA8888";
+
             // compressed image
             this.compressedImage = {width: this.image.width, height: this.image.height, data: new Uint8Array(this.image.data)};
             this.compressedImageTypedArrayBuffer = new Uint8Array(array);
             this.compressedGpuSize = this.gpuSize;
+            this.compressedGpuFormat = this.gpuFormat;
             this.compressedTextureNeedUpdate = true;
 
             // thumbnail
@@ -364,6 +384,7 @@ class gltfImage extends GltfObject
             this.image = png.decode(array);
             this.gpuSize = this.image.width * this.image.height * 4;
             this.gpuSize = Math.floor(this.gpuSize * 4 / 3 );
+            this.gpuFormat = "RGBA8888";
 
             // compressed image
             this.compressedImage = {
@@ -374,6 +395,7 @@ class gltfImage extends GltfObject
                 channels: this.image.channels
             };
             this.compressedGpuSize = this.gpuSize;
+            this.compressedGpuFormat = this.gpuFormat;
             this.compressedImageTypedArrayBuffer = new Uint8Array(array);
             this.compressedTextureNeedUpdate = true;
 
@@ -390,6 +412,7 @@ class gltfImage extends GltfObject
                 this.fileSize = array.byteLength;
                 this.gpuSize = this.image.width * this.image.height * 4;
                 this.gpuSize = Math.floor(this.gpuSize * 4 / 3 );
+                this.gpuFormat = "RGBA8888";
 
                 // Compressed image (just a copy of original)
                 this.compressedMimeType = ImageMimeType.WEBP;
@@ -397,6 +420,7 @@ class gltfImage extends GltfObject
                 this.compressedImageTypedArrayBuffer = new Uint8Array(array);
                 this.compressedFileSize = this.fileSize;
                 this.compressedGpuSize = this.gpuSize;
+                this.compressedGpuFormat = this.gpuFormat;
                 this.compressedTextureNeedUpdate = true;
 
                 // thumbnail
@@ -418,7 +442,6 @@ class gltfImage extends GltfObject
         return true;
     }
 
-    // TODO:
     async setImageFromFiles(files, gltf)
     {
         if (this.uri === undefined || files === undefined)
@@ -450,6 +473,42 @@ class gltfImage extends GltfObject
             {
                 const data = new Uint8Array(await foundFile.arrayBuffer());
                 this.image = await gltf.ktxDecoder.loadKtxFromBuffer(data);
+                this.gpuSize = this.image.gpuSize;
+                this.gpuFormat = this.image.gpuFormat;
+
+                // Compressed image (just a copy of original)
+                this.compressedImage = await gltf.ktxDecoder.loadKtxFromBuffer(data);
+                this.compressedImageTypedArrayBuffer = data;
+                this.compressedFileSize = this.fileSize;
+                this.compressedGpuSize = this.compressedImage.gpuSize;
+                this.compressedGpuFormat = this.compressedImage.gpuFormat;
+                this.compressedTextureNeedUpdate = true;
+
+                // thumbnail
+                const gl = GL;
+                const aspect_ratio = this.image.width / this.image.height;
+                const downscaled_width = Math.min(this.image.width, 98 * aspect_ratio);
+                const downscaled_height = Math.min(this.image.height, 98);
+                const raw_data = await ImageUtils.loadImageDataGL(this.image, downscaled_width, downscaled_height, gl, this.image.isSRGB);
+                const image_data = new ImageData(raw_data, downscaled_width, downscaled_height);
+                const canvas    = document.createElement("canvas");
+                const context   = canvas.getContext("2d");
+                canvas.height = downscaled_height;
+                canvas.width  = downscaled_width;
+                context.putImageData(image_data, 0, 0);
+                this.thumbnail = new Image(downscaled_width, downscaled_height);
+                canvas.toBlob(
+                    (blob) => {
+                        const url = URL.createObjectURL(blob);
+                      
+                        this.thumbnail.onload = () => {
+                          URL.revokeObjectURL(url); // clean up this blob
+                        };                      
+                        this.thumbnail.src = url;
+                    },
+                    "image/jpeg",
+                    0.8
+                );
             }
             else
             {
@@ -465,6 +524,23 @@ class gltfImage extends GltfObject
                 console.error("Could not create image from FileReader image data");
             });
             this.gpuSize = this.image.width * this.image.height * 4;
+            this.gpuSize = Math.floor(this.gpuSize * 4 / 3 );
+            this.gpuFormat = "RGBA8888";
+
+            const blob = new Blob([imageData], { "type": this.mimeType });
+            // Compressed image (just a copy of original)
+            this.compressedImage = await gltfImage.loadHTMLImage(imageData).catch( (error) => {
+                console.error(error);
+            });         
+            this.compressedImageTypedArrayBuffer = new Uint8Array(await blob.arrayBuffer());  
+            this.compressedGpuSize = this.gpuSize;
+            this.compressedGpuFormat = this.gpuFormat;
+            this.compressedTextureNeedUpdate = true;
+
+            // thumbnail
+            this.thumbnail = await gltfImage.loadHTMLImage(imageData).catch( (error) => {
+                console.error(error);
+            });
         }
         else if(this.mimeType === ImageMimeType.WEBP)
         {
@@ -472,6 +548,23 @@ class gltfImage extends GltfObject
             {
                 const data = new Uint8Array(await foundFile.arrayBuffer());
                 this.image = await gltf.webpLibrary.loadWebpFromBuffer(data);
+                this.gpuSize = this.image.width * this.image.height * 4;
+                this.gpuSize = Math.floor(this.gpuSize * 4 / 3 );
+                this.gpuFormat = "RGBA8888";
+
+                // Compressed image (just a copy of original)
+                this.compressedMimeType = ImageMimeType.WEBP;
+                this.compressedImage = await gltf.webpLibrary.decode(data);
+                this.compressedImageTypedArrayBuffer = new Uint8Array(data);
+                this.compressedFileSize = this.fileSize;
+                this.compressedGpuSize = this.gpuSize;
+                this.compressedGpuFormat = this.gpuFormat;
+                this.compressedTextureNeedUpdate = true;
+
+                // thumbnail
+                const image_data = new ImageData(this.image.data, this.image.width, this.image.height);
+                this.thumbnail = new Image(this.image.width, this.image.height);
+                ImageUtils.ImageDataToImg(image_data, this.thumbnail);
             }
             else
             {
@@ -529,6 +622,7 @@ class gltfImage extends GltfObject
                 this.compressedImageTypedArrayBuffer = data;
                 this.compressedFileSize = data.byteLength;
                 this.compressedGpuSize = this.compressedImage.gpuSize;
+                this.compressedGpuFormat = this.compressedImage.gpuFormat;
                 this.compressedMimeType = ImageMimeType.KTX2;
                 this.compressedTextureNeedUpdate = true;
 
@@ -554,6 +648,7 @@ class gltfImage extends GltfObject
             this.compressedFileSize = blob.size;
             this.compressedGpuSize = width * height * 4;
             this.compressedGpuSize = Math.floor(this.compressedGpuSize * 4 / 3 );
+            this.compressedGpuFormat = "RGBA8888";
             this.compressedMimeType = ImageMimeType.JPEG;
             this.compressedTextureNeedUpdate = true;
             URL.revokeObjectURL(objectURL);
@@ -573,6 +668,7 @@ class gltfImage extends GltfObject
             this.compressedFileSize = blob.size;
             this.compressedGpuSize = width * height * 4;
             this.compressedGpuSize = Math.floor(this.compressedGpuSize * 4 / 3 );
+            this.compressedGpuFormat = "RGBA8888";
             this.compressedMimeType = ImageMimeType.PNG;
             this.compressedTextureNeedUpdate = true;
             URL.revokeObjectURL(objectURL);
@@ -599,6 +695,7 @@ class gltfImage extends GltfObject
             this.compressedFileSize = blob.size;
             this.compressedGpuSize = width * height * 4;
             this.compressedGpuSize = Math.floor(this.compressedGpuSize * 4 / 3 );
+            this.compressedGpuFormat = "RGBA8888";
             this.compressedMimeType = ImageMimeType.WEBP;
             this.compressedTextureNeedUpdate = true;
             URL.revokeObjectURL(objectURL);

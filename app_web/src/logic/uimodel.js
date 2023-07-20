@@ -125,6 +125,8 @@ class UIModel
         this.compressionEncoding = app.compressionEncodingSelectionChanged$.pipe(pluck("event", "msg"));
         this.compressionUASTC_Flags = app.compressedUASTC_FlagsChanged$.pipe(pluck("event", "msg"));
         this.compressionUASTC_Rdo = app.compressedUASTC_RdoChanged$.pipe(pluck("event", "msg"));
+        this.compressionUASTC_Rdo_Algorithm = app.compressionUASTC_Rdo_AlgorithmSelectionChanged$.pipe(pluck("event", "msg"));
+        this.compressionUASTC_Rdo_Level = app.compressionUASTC_Rdo_LevelChanged$.pipe(pluck("event", "msg"));
         this.compressionUASTC_Rdo_QualityScalar = app.compressionUASTC_Rdo_QualityScalarChanged$.pipe(pluck("event", "msg"));
         this.compressionUASTC_Rdo_DictionarySize = app.compressionUASTC_Rdo_DictionarySizeChanged$.pipe(pluck("event", "msg"));
         this.compressionUASTC_Rdo_MaxSmoothBlockErrorScale = app.compressionUASTC_Rdo_MaxSmoothBlockErrorScaleChanged$.pipe(pluck("event", "msg"));
@@ -495,8 +497,8 @@ class UIModel
         statisticsUpdateObservable.subscribe(
             data => {
                 let compressionStatistics = {};
-                compressionStatistics["Original"] = data.texturesSize.toFixed(2) + " mb";
-                compressionStatistics["Compressed"] = "";
+                compressionStatistics["Before"] = data.texturesSize.toFixed(2) + " mb";
+                compressionStatistics["After"] = "";
                 this.app.compressionStatistics = compressionStatistics;
                 this.app.texturesStatistics = data.textures;
                 this.app.texturesUpdated = true;
@@ -518,6 +520,7 @@ class UIModel
 
                 this.app.selectedCompressionUASTC_Flags = "DEFAULT";
                 this.app.selectedCompressionUASTC_Rdo = false;
+                this.app.selectedCompressionUASTC_Rdo_Level = 18;
                 this.app.selectedCompressionUASTC_Rdo_QualityScalar = 1.0;
                 this.app.selectedCompressionUASTC_Rdo_DictionarySize = 4096;
                 this.app.selectedCompressionUASTC_Rdo_MaxSmoothBlockErrorScale = 10.0;
@@ -541,11 +544,12 @@ class UIModel
         statisticsUpdateObservable.subscribe(
             data => {
                 let done = data.textures.some(texture => texture.isCompleted);
-                this.app.compressionStatistics["Compressed"] = done ? (data.texturesSize.toFixed(2) + " mb") : "";
+                this.app.compressionStatistics["After"] = done ? (data.texturesSize.toFixed(2) + " mb") : "";
                 this.app.texturesStatistics = data.textures;
                 this.app.compressionCompleted = done;
                 this.app.compressedKTX |= this.app.selectedCompressionType === "KTX2";
                 this.app.compressionBtnTitle = "Compress Textures";
+                this.app.scrollIntoView = true;
             },
         );
     }
@@ -561,6 +565,12 @@ class UIModel
     updateEncodingKTX(value)
     {
         this.app.selectedCompressionEncoding = (value === "Color") ? "ETC1S" : "UASTC";
+    }
+
+    updateSlider(index, previewMode)
+    {
+        this.app.compressionBefore = (previewMode === GltfState.CompressionComparison.PREVIEW_2D) ? 'Before\n (' + this.app.texturesStatistics[index].format + ')' : "Before";
+        this.app.compressionAfter  = (previewMode === GltfState.CompressionComparison.PREVIEW_2D) ? 'After\n ('  + this.app.texturesStatistics[index].formatCompressed + ')' : "After";
     }
 
     updateImageSlider(value)

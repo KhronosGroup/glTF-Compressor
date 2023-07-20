@@ -39,6 +39,13 @@ class KtxDecoder {
         else return this.libktx.UastcFlags.LEVEL_DEFAULT.value; 
     }
 
+    stringToSupercmpScheme(s) {
+        if (s === 'Zstd') return this.libktx.SupercmpScheme.ZSTD;
+        else if (s === 'Zlib') return this.libktx.SupercmpScheme.ZLIB;
+        else if (s === 'BasisLZ') return this.libktx.SupercmpScheme.BASIS_LZ;
+        else return this.libktx.SupercmpScheme.NONE;
+    }
+
     transcodeRGBA(ktexture) {
         if (!ktexture.needsTranscoding) {
             return;
@@ -50,6 +57,7 @@ class KtxDecoder {
     }
 
     transcode(ktexture) {
+        ktexture.gpuFormat = "RGBA8888";
         if (ktexture.needsTranscoding) {
             let format;
 
@@ -68,17 +76,24 @@ class KtxDecoder {
 
             if (astcSupported) {
                 format = this.libktx.TranscodeTarget.ASTC_4x4_RGBA;
+                ktexture.gpuFormat = "ASTC_4x4_RGBA";
             } else if (bptcSupported) {
                 format = this.libktx.TranscodeTarget.BC7_RGBA;
+                ktexture.gpuFormat = "BC7_RGBA";
             } else if (dxtSupported) {
                 format = this.libktx.TranscodeTarget.BC1_OR_3;
+                ktexture.gpuFormat = "BC1_OR_3";
             } else if (pvrtcSupported) {
                 format = this.libktx.TranscodeTarget.PVRTC1_4_RGBA;
+                ktexture.gpuFormat = "PVRTC1_4_RGBA";
             } else if (etcSupported) {
                 format = this.libktx.TranscodeTarget.ETC;
+                ktexture.gpuFormat = "ETC";
             } else {
                 format = this.libktx.TranscodeTarget.RGBA8888;
+                ktexture.gpuFormat = "RGBA8888";
             }
+           
             if (ktexture.transcodeBasis(format, 0) != this.libktx.ErrorCode.SUCCESS) {
                 console.warn('Texture transcode failed. See console for details.');
             }
@@ -102,6 +117,9 @@ class KtxDecoder {
         uploadResult.texture.width = texture.baseWidth;
         uploadResult.texture.height = texture.baseHeight;
         uploadResult.texture.gpuSize = texture.dataSize;
+        uploadResult.texture.gpuFormat = texture.gpuFormat;
+        uploadResult.texture.isSRGB = texture.isSRGB;
+        
         return uploadResult.texture;
     }
 
@@ -120,6 +138,9 @@ class KtxDecoder {
         uploadResult.texture.width = texture.baseWidth;
         uploadResult.texture.height = texture.baseHeight;
         uploadResult.texture.gpuSize = texture.dataSize;
+        uploadResult.texture.gpuFormat = texture.gpuFormat;
+        uploadResult.texture.isSRGB = texture.isSRGB;
+       
         return uploadResult.texture;
     }
 
@@ -135,8 +156,14 @@ class KtxDecoder {
             basisu_options.compressionLevel = 2;
             options.basisu_options = basisu_options;
         }
+        if (!options.hasOwnProperty('compression_level')) {
+            options.compression_level = 18;
+        }
+        if (!options.hasOwnProperty('supercmp_scheme')) {
+            options.supercmp_scheme = this.libktx.SupercmpScheme.NONE;
+        }   
 
-        const result = texture.compressBasisU(options.basisu_options);
+        const result = texture.compressBasisU(options.basisu_options, options.supercmp_scheme, options.compression_level);
         const encoded_data = Uint8ClampedArray.from(result);
         return encoded_data;
     }

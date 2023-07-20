@@ -4,11 +4,11 @@
 <head>
     <meta charset="utf-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <title>glTF Sample Viewer</title>
+    <title>glTF Compressor for KTX</title>
 
     <meta name="author" content="Khronos Group Inc.">
-    <meta name="description" content="The official glTF sample viewer">
-    <meta name="keywords" content="glTF, WebGL, Sample, Viewer, PBR">
+    <meta name="description" content="The official glTF Compressor for KTX">
+    <meta name="keywords" content="glTF, WebGL, Sample, Viewer, PBR, KTX">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <link rel="stylesheet" href="GltfSVApp.css">
@@ -124,6 +124,11 @@
                                 <td>{{ texture.formatCompressed }}</td>
                             </tr>
                             <tr>
+                                <td class="td_style">GpuFormat</td>
+                                <td>{{ texture.gpuformat }}</td>
+                                <td>{{ texture.gpuformatCompressed }}</td>
+                            </tr>
+                            <tr>
                                 <td class="td_style">Resolution</td>
                                 <td>{{ texture.resolution }}</td>
                                 <td>{{ texture.resolutionCompressed }}</td>
@@ -154,10 +159,11 @@
                 Canvas!
             </canvas>
             <b-slider rounded v-if="compressionCompleted && comparisonSlider" v-model="previewImageSlider" :min="0" v-bind:max="1" :step=0.01
-                class="comparisonImageSlider" v-stream:input="previewImageSliderChanged$">
-                <b-slider-tick :value="0" class="iblIntensitySliderMarker"></b-slider-tick>
-                <b-slider-tick :value="1.0" class="iblIntensitySliderMarker"></b-slider-tick>
+            :tooltip="false" class="comparisonImageSlider" id="imageSlider" v-stream:input="previewImageSliderChanged$">
+                <b-slider-tick :value="0.1">{{ compressionBefore }}</b-slider-tick>
+                <b-slider-tick :value="0.9">{{ compressionAfter }}</b-slider-tick>
             </b-slider>
+
             <div class="canvasUIMaximize">
                 <img v-bind:src="[fullscreen ? 'assets/ui/Icon_Collapse.svg' : 'assets/ui/Icon_Expand.svg']"
                     @click="toggleFullscreen()" ref="fullscreenIcon" class="maximizeCanvasIcon" width="30px">
@@ -466,43 +472,65 @@
                                                     </option>
                                                 </b-select>
                                             </b-field>
-                                            <b-switch v-model="selectedCompressionUASTC_Rdo" v-stream:input="compressedUASTC_RdoChanged$">Rate Distortion Optimization 
+                                            <b-switch v-model="selectedCompressionUASTC_Rdo" v-stream:input="compressedUASTC_RdoChanged$">Supercompression 
                                             </b-switch>
                                             <div v-if="selectedCompressionUASTC_Rdo">
-                                                <b-field label="Quality Scalar" class="smallerLabel">
-                                                    <b-slider rounded v-model="selectedCompressionUASTC_Rdo_QualityScalar" :min="0.001" v-bind:max="50.0" :step=0.01
-                                                        class="iblIntensitySlider" v-stream:input="compressionUASTC_Rdo_QualityScalarChanged$">
-                                                        <b-slider-tick :value="0.001" class="iblIntensitySliderMarker">0.001</b-slider-tick> 
-                                                        <b-slider-tick :value="50.0" class="iblIntensitySliderMarker">50</b-slider-tick>                               
+                                                
+                                                <b-field label="Algorithm" class="smallerLabel">
+                                                    <b-select v-stream:input="compressionUASTC_Rdo_AlgorithmSelectionChanged$"
+                                                        v-model="selectedCompressionUASTC_Rdo_Algorithm">
+                                                        <option v-for="(item) in compressionUASTC_Rdo_Algorithms" v-bind:value="item.title">
+                                                            {{ item.title }}
+                                                        </option>
+                                                    </b-select>
+                                                </b-field>
+
+                                                <b-field label="Level" class="smallerLabel">
+                                                    <b-slider rounded v-model="selectedCompressionUASTC_Rdo_Level" :min="1" v-bind:max="22" :step=1
+                                                        class="iblIntensitySlider" v-stream:input="compressionUASTC_Rdo_LevelChanged$">
+                                                        <b-slider-tick :value="1" class="iblIntensitySliderMarker">1</b-slider-tick> 
+                                                        <b-slider-tick :value="22" class="iblIntensitySliderMarker">22</b-slider-tick>                               
                                                     </b-slider>
                                                 </b-field>
 
-                                                <b-field label="Dictionary Size" class="smallerLabel">
-                                                    <b-slider rounded v-model="selectedCompressionUASTC_Rdo_DictionarySize" :min="64" v-bind:max="65536" :step=1
-                                                        class="iblIntensitySlider" v-stream:input="compressionUASTC_Rdo_DictionarySizeChanged$">
-                                                        <b-slider-tick :value="64" class="iblIntensitySliderMarker">64</b-slider-tick> 
-                                                        <b-slider-tick :value="65536" class="iblIntensitySliderMarker">65536</b-slider-tick>                               
-                                                    </b-slider>
-                                                </b-field>
+                                                <b-field label="RDO Settings" class="smallerLabel">
+                                                
+                                                    <b-field label="Quality Scalar" class="smallerLabel">
+                                                        <b-slider rounded v-model="selectedCompressionUASTC_Rdo_QualityScalar" :min="0.001" v-bind:max="50.0" :step=0.01
+                                                            class="iblIntensitySlider" v-stream:input="compressionUASTC_Rdo_QualityScalarChanged$">
+                                                            <b-slider-tick :value="0.001" class="iblIntensitySliderMarker">0.001</b-slider-tick> 
+                                                            <b-slider-tick :value="50.0" class="iblIntensitySliderMarker">50</b-slider-tick>                               
+                                                        </b-slider>
+                                                    </b-field>
 
-                                                <b-field label="Max Smooth Block Error Scale" class="smallerLabel">
-                                                    <b-slider rounded v-model="selectedCompressionUASTC_Rdo_MaxSmoothBlockErrorScale" :min="1.0" v-bind:max="300.0" :step=0.1
-                                                        class="iblIntensitySlider" v-stream:input="compressionUASTC_Rdo_MaxSmoothBlockErrorScaleChanged$">
-                                                        <b-slider-tick :value="1.0" class="iblIntensitySliderMarker">1</b-slider-tick> 
-                                                        <b-slider-tick :value="300.0" class="iblIntensitySliderMarker">300</b-slider-tick>                               
-                                                    </b-slider>
-                                                </b-field>
+                                                    <b-field label="Dictionary Size" class="smallerLabel">
+                                                        <b-slider rounded v-model="selectedCompressionUASTC_Rdo_DictionarySize" :min="64" v-bind:max="65536" :step=1
+                                                            class="iblIntensitySlider" v-stream:input="compressionUASTC_Rdo_DictionarySizeChanged$">
+                                                            <b-slider-tick :value="64" class="iblIntensitySliderMarker">64</b-slider-tick> 
+                                                            <b-slider-tick :value="65536" class="iblIntensitySliderMarker">65536</b-slider-tick>                               
+                                                        </b-slider>
+                                                    </b-field>
 
-                                                <b-field label="Max Smooth Block Standard Deviation" class="smallerLabel">
-                                                    <b-slider rounded v-model="selectedCompressionUASTC_Rdo_MaxSmoothBlockStandardDeviation" :min="0.01" v-bind:max="65536.0" :step=0.01
-                                                        class="iblIntensitySlider" v-stream:input="compressionUASTC_Rdo_MaxSmoothBlockStandardDeviationChanged$">
-                                                        <b-slider-tick :value="0.01" class="iblIntensitySliderMarker">0.01</b-slider-tick> 
-                                                        <b-slider-tick :value="65536.0" class="iblIntensitySliderMarker">65536</b-slider-tick>                               
-                                                    </b-slider>
-                                                </b-field>
+                                                    <b-field label="Max Smooth Block Error Scale" class="smallerLabel">
+                                                        <b-slider rounded v-model="selectedCompressionUASTC_Rdo_MaxSmoothBlockErrorScale" :min="1.0" v-bind:max="300.0" :step=0.1
+                                                            class="iblIntensitySlider" v-stream:input="compressionUASTC_Rdo_MaxSmoothBlockErrorScaleChanged$">
+                                                            <b-slider-tick :value="1.0" class="iblIntensitySliderMarker">1</b-slider-tick> 
+                                                            <b-slider-tick :value="300.0" class="iblIntensitySliderMarker">300</b-slider-tick>                               
+                                                        </b-slider>
+                                                    </b-field>
 
-                                                <b-switch v-model="selectedCompressionUASTC_Rdo_DonotFavorSimplerModes" v-stream:input="compressedUASTC_Rdo_DonotFavorSimplerModesChanged$">Do not favor simpler modes
-                                                </b-switch>
+                                                    <b-field label="Max Smooth Block Standard Deviation" class="smallerLabel">
+                                                        <b-slider rounded v-model="selectedCompressionUASTC_Rdo_MaxSmoothBlockStandardDeviation" :min="0.01" v-bind:max="65536.0" :step=0.01
+                                                            class="iblIntensitySlider" v-stream:input="compressionUASTC_Rdo_MaxSmoothBlockStandardDeviationChanged$">
+                                                            <b-slider-tick :value="0.01" class="iblIntensitySliderMarker">0.01</b-slider-tick> 
+                                                            <b-slider-tick :value="65536.0" class="iblIntensitySliderMarker">65536</b-slider-tick>                               
+                                                        </b-slider>
+                                                    </b-field>
+
+                                                    <b-switch v-model="selectedCompressionUASTC_Rdo_DonotFavorSimplerModes" v-stream:input="compressedUASTC_Rdo_DonotFavorSimplerModesChanged$">Do not favor simpler modes
+                                                    </b-switch>
+
+                                                </b-field>
                                             </div>    
                                         </b-field>
                                     </div>
@@ -599,11 +627,11 @@
                                 </button> 
 
                                 <div v-if="compressionStarted && !compressionCompleted">
-                                <b-progress type="is-primary" :value="progressValue" :key="progressValue" :max="100" style="padding-top: 5px;">
+                                    <b-progress type="is-primary" :value="progressValue" :key="progressValue" :max="100" style="padding-top: 5px;">
                                     </b-progress>
                                 </div>
 
-                                <div v-if="compressionCompleted">
+                                <div id="targetElement" v-show="compressionCompleted">
                                     <b-field label="COMPARISON" class="subtitle">
                                         <b-switch v-model="comparisonSlider">Comparison Slider Preview
                                         </b-switch>
