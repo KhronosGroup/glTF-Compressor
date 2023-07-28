@@ -1,22 +1,22 @@
-= LICENSE file for the KhronosGroup/glTF-Compressor project
+## LICENSE file for the KhronosGroup/glTF-Compressor project
 
 Files in this repository fall under one of these licenses:
 
   * SPDX license identifier: "`Apache-2.0`"
-  ** Apache License 2.0
-  ** For files copied from other Apache-2.0 projects (gltf-sampler-viewer)
+  * Apache License 2.0
+    * For files copied from other Apache-2.0 projects (gltf-sampler-viewer)
 
   * SPDX license identifier: "`CC0-1.0`"
-  ** CC0 1.0 Universal (CC0 1.0) Public Domain Dedication
-  ** For specific svg files
+    * CC0 1.0 Universal (CC0 1.0) Public Domain Dedication
+    * For specific svg files
 
   * SPDX license identifier: "`BSD-3-Clause`"
-  ** BSD-3-Clause License
-  ** For libwebp.js file
+    * BSD-3-Clause License
+    * For libwebp.js file
 
   * SPDX license identifier: "`MIT`"
-  ** MIT License
-  ** For hdrpng.js file, used to display HDR images as textures.
+    * MIT License
+    * For hdrpng.js file, used to display HDR images as textures.
 
 Full license text of these licenses is available at:
 
