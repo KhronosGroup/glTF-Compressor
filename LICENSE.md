@@ -3,7 +3,7 @@
 Files in this repository fall under one of these licenses:
 
   * SPDX license identifier: "`Apache-2.0`"
-  * Apache License 2.0
+    * Apache License 2.0
     * For files copied from other Apache-2.0 projects (gltf-sampler-viewer)
 
   * SPDX license identifier: "`CC0-1.0`"
