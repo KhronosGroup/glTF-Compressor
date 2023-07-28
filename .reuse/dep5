@@ -2,26 +2,26 @@ Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: glTF-Compressor
 Source: https://github.com/KhronosGroup/glTF-Compressor
 
-Files: assets/ui/Texture Compressor*
-Copyright: 2023 SVG Repo LLC
-License: CC0-1.0
+Files: .eslint* .git* .npmignore package.json rollup.config.js *.md *.adoc .github/* .vscode/* app_headless/* app_web/*
+Copyright: 2020-2023 The Khronos Group Inc.
+License: Apache-2.0
+
+Files: source/*
+Copyright: 2020-2023 The Khronos Group Inc.
+License: Apache-2.0
 
 Files: source/libs/hdrpng.js
 Copyright: 2017 enki
 License: MIT
 
 Files: source/libs/libwebp.js
-Copyright:  2010, Google Inc. 
+Copyright: 2010 Google Inc.
 License: BSD-3-Clause
 
-Files: .eslint* .git* .npmignore package.json rollup.config.js *.md *.adoc .github/* .vscode/* app_headless/* app_web/*
+Files: assets/*
 Copyright: 2020-2023 The Khronos Group Inc.
 License: Apache-2.0
 
-Files: source/gltf-sample-viewer.js source/package.json source/ibl_sampler.js source/gltf/* source/GltfState/* source/GltfView/* source/Renderer/* source/ResourceLoader/* source/shaders/* source/libs/backup/* source/libs/libktx.js source/libs/libktx.wasm source/libs/libwebp.wasm
-Copyright: 2020-2023 The Khronos Group Inc.
-License: Apache-2.0
-
-Files: assets/figures/* assets/images/* assets/ui/Animation* assets/ui/Capture* assets/ui/Developer* assets/ui/Display* assets/ui/GitHub* assets/ui/Icon* assets/ui/Model* assets/ui/Navigation* assets/ui/XMP*
-Copyright: 2020-2023 The Khronos Group Inc.
-License: Apache-2.0
+Files: assets/ui/Texture*
+Copyright: 2023 SVG Repo LLC
+License: CC0-1.0
