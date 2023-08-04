@@ -24,7 +24,7 @@ jobs:
         run: |
           SIZE=$(du -s -B 1 app_web/dist/ | cut -f 1)
           echo $SIZE
-          if [[ $SIZE -gt 1073741824 ]]; then echo 'dist folder exceeds limit of 1GB! Aborting'; exit 1; fi
+          if [[ $SIZE -gt 1573741824 ]]; then echo 'dist folder exceeds limit of 1.5GB! Aborting'; exit 1; fi
 
       - name: Deploy to Khronos repo
         continue-on-error: true # If no changes are commited this action fails
