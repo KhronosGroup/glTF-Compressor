@@ -3,7 +3,7 @@ glTF-Compressor
 
 [![](assets/images/ToyCar.jpg)](https://phasmatic3d.github.io/glTF-Sample-Viewer-KTX-demo/)
 
-This is the official [Khronos glTF 2.0](https://www.khronos.org/gltf/) image compression project using [WebGL](https://www.khronos.org/webgl/): [glTF-Compressor](https://phasmatic3d.github.io/glTF-Sample-Viewer-KTX-demo/)
+This is the official [Khronos glTF 2.0](https://www.khronos.org/gltf/) image compression project using [WebGL](https://www.khronos.org/webgl/): [glTF-Compressor](https://github.khronos.org/glTF-Compressor-Release/)
 
 
 
@@ -54,7 +54,7 @@ For local usage and debugging, please follow these instructions:
 Web App
 -------
 
-You can find an example application for the glTF-Compressor in the [app_web subdirectory of the glTF-Compressor repository](app_web). A live demo can be found at [https://phasmatic3d.github.io/glTF-Sample-Viewer-KTX-demo/](https://phasmatic3d.github.io/glTF-Sample-Viewer-KTX-demo/).
+You can find an example application for the glTF-Compressor in the [app_web subdirectory of the glTF-Compressor repository](app_web). A live demo can be found at [https://github.khronos.org/glTF-Compressor-Release/](https://github.khronos.org/glTF-Compressor-Release/).
 
 **Running a local version**
 
