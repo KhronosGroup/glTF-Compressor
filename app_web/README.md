@@ -1,15 +1,15 @@
-glTF Sample Viewer Web App
+glTF Compressor Web App
 ==============================
 
-[![](../assets/images/BoomBox.jpg)](https://github.khronos.org/glTF-Sample-Viewer-Release/)
+[![](../assets/images/ToyCar.jpg)](https://github.khronos.org/glTF-Compressor-Release/)
 
-This is the official [Khronos glTF 2.0](https://www.khronos.org/gltf/) Sample Viewer using [WebGL](https://www.khronos.org/webgl/): [glTF 2.0 Sample Viewer](https://github.khronos.org/glTF-Sample-Viewer-Release/)
+This is the official [Khronos glTF](https://www.khronos.org/gltf/) Compressor using [WebGL](https://www.khronos.org/webgl/), [KTX](https://www.khronos.org/ktx/): [glTF Compressor](https://github.khronos.org/glTF-Compressor-Release/)
 
 
 Viewer
 ======
 
-Link to the live [glTF 2.0 Sample Viewer](https://github.khronos.org/glTF-Sample-Viewer-Release/).
+Link to the live [glTF Compressor](https://github.khronos.org/glTF-Compressor-Release/).
 
 Usage
 -----
@@ -20,7 +20,7 @@ Usage
 
 `scroll` : Zoom camera
 
-`GUI` : Use to change models and settings
+`GUI` : Use to change models and compression & comparison settings
 
 ### Change glTF model
 
