@@ -271,6 +271,9 @@ async function main()
     // GSV-KTX
     uiModel.texturesSelectionType.subscribe( texturesSelectionType => {
         for(let i=0; i<state.gltf.images.length; i++){
+            if(state.gltf.images[i].mimeType === ImageMimeType.GLTEXTURE)
+                continue;
+
             const type = state.gltf.images[i].imageType;
             
             document.getElementById('image-' + i).checked = false;
@@ -412,7 +415,7 @@ async function main()
         // Images to be Compressed
         state.compressorParameters.selectedImages = [];
         for(let i=0; i<state.gltf.images.length; i++)
-            if(document.getElementById('image-' + i).checked)
+            if(state.gltf.images[i].mimeType !== ImageMimeType.GLTEXTURE && document.getElementById('image-' + i).checked)
                 state.compressorParameters.selectedImages.push(i);
 
         if(state.compressorParameters.selectedImages.length === 0)
