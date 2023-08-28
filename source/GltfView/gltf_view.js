@@ -199,117 +199,47 @@ class GltfView
         const setImageType = (image, type, usage) => {
             if(image !== undefined)
             {
-                state.gltf.images[image.index].imageType = type;
-                state.gltf.images[image.index].imageUsage.add(usage);
+                const index = state.gltf.textures[image.index].source;
+
+                state.gltf.images[index].imageType = type;
+                state.gltf.images[index].imageUsage.add(usage);
             }
         };
 
         state.gltf.materials.forEach(material => {
 
             setImageType(material.normalTexture, ImageType.NORMAL, "normal");
-            /*if (material.normalTexture !== undefined)
-            {
-                state.gltf.images[material.normalTexture.index].imageType = ImageType.NORMAL;
-            }*/
-
             setImageType(material.occlusionTexture, ImageType.NONCOLOR, "occlusion");
-            /*if (material.occlusionTexture !== undefined)
-            {
-                state.gltf.images[material.occlusionTexture.index].imageType = ImageType.NONCOLOR;
-            }*/
-
             setImageType(material.emissiveTexture, ImageType.COLOR, "emissive");
+            setImageType(material.baseColorTexture, ImageType.COLOR, "baseColor");
+            setImageType(material.metallicRoughnessTexture, ImageType.NONCOLOR, "metallicRoughness");
 
-            if (material.baseColorTexture !== undefined)
-            {
-                state.gltf.images[material.baseColorTexture.index].imageType = ImageType.COLOR;
-                state.gltf.images[material.baseColorTexture.index].imageUsage.add("baseColor");
-            }
-
-            if (material.metallicRoughnessTexture !== undefined)
-            {
-                state.gltf.images[material.metallicRoughnessTexture.index].imageType = ImageType.NONCOLOR;
-                state.gltf.images[material.metallicRoughnessTexture.index].imageUsage.add("metallicRoughness");
-            }
-
-            if (material.diffuseTexture !== undefined)
-            {
-                state.gltf.images[material.diffuseTexture.index].imageType = ImageType.COLOR;
-                state.gltf.images[material.diffuseTexture.index].imageUsage.add("diffuse");
-            }
-
-            if (material.specularGlossinessTexture !== undefined)
-            {
-                state.gltf.images[material.specularGlossinessTexture.index].imageType = ImageType.COLOR;
-                state.gltf.images[material.specularGlossinessTexture.index].imageUsage.add("glossiness");
-            }
+            // KHR Extension: SpecularGlossiness
+            setImageType(material.diffuseTexture, ImageType.COLOR, "diffuse");
+            setImageType(material.specularGlossinessTexture, ImageType.COLOR, "specularGlossiness");
 
             // KHR Extension: Clearcoat
-            if (material.clearcoatTexture !== undefined)
-            {
-                state.gltf.images[material.clearcoatTexture.index].imageType = ImageType.NONCOLOR;
-                state.gltf.images[material.clearcoatTexture.index].imageUsage.add("clearcoat");
-            }
-            if (material.clearcoatRoughnessTexture !== undefined)
-            {
-                state.gltf.images[material.clearcoatRoughnessTexture.index].imageType = ImageType.NONCOLOR;
-                state.gltf.images[material.clearcoatRoughnessTexture.index].imageUsage.add("clearcoat roughness");
-            }
-            if (material.clearcoatNormalTexture !== undefined)
-            {
-                state.gltf.images[material.clearcoatNormalTexture.index].imageType = ImageType.NORMAL;
-                state.gltf.images[material.clearcoatNormalTexture.index].imageUsage.add("clearcoat normal");
-            }
+            setImageType(material.clearcoatTexture, ImageType.NONCOLOR, "clearcoat");
+            setImageType(material.clearcoatRoughnessTexture, ImageType.NONCOLOR, "clearcoat roughness");
+            setImageType(material.clearcoatNormalTexture, ImageType.NORMAL, "clearcoat normal");
 
             // KHR Extension: Sheen            
-            if (material.sheenRoughnessTexture !== undefined)
-            {
-                state.gltf.images[material.sheenRoughnessTexture.index].imageType = ImageType.NONCOLOR;
-                state.gltf.images[material.sheenRoughnessTexture.index].imageUsage.add("sheen roughness");
-            }
-            if (material.sheenColorTexture !== undefined)
-            {
-                state.gltf.images[material.sheenColorTexture.index].imageType = ImageType.COLOR;
-                state.gltf.images[material.sheenColorTexture.index].imageUsage.add("sheen color");
-            }
+            setImageType(material.sheenRoughnessTexture, ImageType.NONCOLOR, "sheen roughness");
+            setImageType(material.sheenColorTexture, ImageType.COLOR, "sheen color");
 
             // KHR Extension: Specular
-            if (material.specularTexture !== undefined)
-            {
-                state.gltf.images[material.specularTexture.index].imageType = ImageType.NONCOLOR;
-                state.gltf.images[material.specularTexture.index].imageUsage.add("specular");
-            }
-            if (material.specularColorTexture !== undefined)
-            {
-                state.gltf.images[material.specularColorTexture.index].imageType = ImageType.COLOR;
-                state.gltf.images[material.specularColorTexture.index].imageUsage.add("specular color");
-            }
+            setImageType(material.specularTexture, ImageType.NONCOLOR, "specular");
+            setImageType(material.specularColorTexture, ImageType.COLOR, "specular color");
 
             // KHR Extension: Transmission
-            if (material.transmissionTexture !== undefined)
-            {
-                state.gltf.images[material.transmissionTexture.index].imageType = ImageType.NONCOLOR;
-                state.gltf.images[material.transmissionTexture.index].imageUsage.add("transmission");
-            }
+            setImageType(material.transmissionTexture, ImageType.NONCOLOR, "transmission");
 
             // KHR Extension: Volume
-            if (material.thicknessTexture !== undefined)
-            {
-                state.gltf.images[material.thicknessTexture.index].imageType = ImageType.NONCOLOR;
-                state.gltf.images[material.thicknessTexture.index].imageUsage.add("volume thickness");
-            }
+            setImageType(material.thicknessTexture, ImageType.NONCOLOR, "volume thickness");
 
             // KHR Extension: Iridescence
-            if (material.iridescenceTexture !== undefined)
-            {
-                state.gltf.images[material.iridescenceTexture.index].imageType = ImageType.NONCOLOR;
-                state.gltf.images[material.iridescenceTexture.index].imageUsage.add("iridescence");
-            }
-            if (material.iridescenceThicknessTexture !== undefined)
-            {
-                state.gltf.images[material.iridescenceThicknessTexture.index].imageType = ImageType.NONCOLOR;
-                state.gltf.images[material.iridescenceThicknessTexture.index].imageUsage.add("iridescence thickness");
-            }
+            setImageType(material.iridescenceTexture, ImageType.NONCOLOR, "iridescence");
+            setImageType(material.iridescenceThicknessTexture, ImageType.NONCOLOR, "iridescence thickness");
         });
 
         // Reset values
@@ -440,7 +370,8 @@ class GltfView
                 }
             }
 
-            textures.push(texture);
+            if(element.mimeType !== ImageMimeType.GLTEXTURE)
+                textures.push(texture);
             texturesFileSize += isIncluded ? fileSizeCompressed : fileSize;
         });
 
