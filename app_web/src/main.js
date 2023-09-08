@@ -271,8 +271,10 @@ async function main()
     // GSV-KTX
     uiModel.texturesSelectionType.subscribe( texturesSelectionType => {
         for(let i=0; i<state.gltf.images.length; i++){
+            if(state.gltf.images[i].mimeType === ImageMimeType.GLTEXTURE)
+                continue;
+
             const type = state.gltf.images[i].imageType;
-            
             document.getElementById('image-' + i).checked = false;
             if((texturesSelectionType === "All") || 
                (texturesSelectionType === "Color"     && type === ImageType.COLOR)    ||
@@ -412,7 +414,7 @@ async function main()
         // Images to be Compressed
         state.compressorParameters.selectedImages = [];
         for(let i=0; i<state.gltf.images.length; i++)
-            if(document.getElementById('image-' + i).checked)
+            if(state.gltf.images[i].mimeType !== ImageMimeType.GLTEXTURE && document.getElementById('image-' + i).checked)
                 state.compressorParameters.selectedImages.push(i);
 
         if(state.compressorParameters.selectedImages.length === 0)
@@ -789,11 +791,12 @@ async function main()
         
         images.forEach(function (index) {
             const image = gltf.images[index];
-            const slash_index  = image.uri.lastIndexOf("/"); 
-            const point_index  = image.uri.lastIndexOf("."); 
-            const ext = (point_index < 0) ? "" : image.uri.substring(point_index + 1);
-            const input = (slash_index < 0) ? image.uri : image.uri.substring(slash_index + 1);
-            const output = ((slash_index < 0 || point_index < 0) ? image.uri : image.uri.substring(slash_index + 1, point_index)) + '.ktx2';
+            const uri = (image.uri) ? image.uri : "Image_" + index.toString() + '.' + ((image.mimeType) ? image.mimeType.substring(image.mimeType.lastIndexOf("/") + 1) : '');
+            const slash_index  = uri.lastIndexOf("/"); 
+            const point_index  = uri.lastIndexOf("."); 
+            const ext = (point_index < 0) ? "" : uri.substring(point_index + 1);
+            const input = (slash_index < 0) ? uri : uri.substring(slash_index + 1);
+            const output = ((point_index < 0) ? uri : uri.substring(slash_index + 1, point_index)) + '.ktx2';
             let command = '';
             command += 'toktx';
             command += ' --t2';
