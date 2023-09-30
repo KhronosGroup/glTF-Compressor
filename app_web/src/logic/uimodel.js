@@ -497,7 +497,7 @@ class UIModel
         statisticsUpdateObservable.subscribe(
             data => {
                 let compressionStatistics = {};
-                compressionStatistics["Before"] = data.texturesSize.toFixed(2) + " mb";
+                compressionStatistics["Before"] = ["- DiskSize: " + data.texturesSize.toFixed(2) + " mb", "- GpuSize: " + data.texturesGpuSize.toFixed(2) + " mb"];
                 compressionStatistics["After"] = "";
                 this.app.compressionStatistics = compressionStatistics;
                 this.app.texturesStatistics = data.textures;
@@ -544,7 +544,7 @@ class UIModel
         statisticsUpdateObservable.subscribe(
             data => {
                 let done = data.textures.some(texture => texture.isCompleted);
-                this.app.compressionStatistics["After"] = done ? (data.texturesSize.toFixed(2) + " mb") : "";
+                this.app.compressionStatistics["After"] = done ? ["- DiskSize: " + data.texturesSize.toFixed(2) + " mb", "- GpuSize: " + data.texturesGpuSize.toFixed(2) + " mb"] : "";
                 this.app.texturesStatistics = data.textures;
                 this.app.compressionCompleted = done;
                 this.app.compressedKTX |= this.app.selectedCompressionType === "KTX2";

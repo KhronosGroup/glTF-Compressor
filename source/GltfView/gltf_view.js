@@ -192,7 +192,8 @@ class GltfView
         {
             return {
                 textures: [],
-                texturesSize: 0
+                texturesSize: 0,
+                texturesGpuSize: 0
             };
         }
 
@@ -252,6 +253,7 @@ class GltfView
         const toMb = (value) => { return value/1024/1024; };
         
         var texturesFileSize = 0;
+        var texturesFileGpuSize = 0;
         const textures = [];
         const activeTextures = state.gltf.images;
         activeTextures.forEach(element => {
@@ -286,12 +288,14 @@ class GltfView
             if(element.mimeType !== ImageMimeType.GLTEXTURE)
                 textures.push(texture);
             texturesFileSize += fileSize;
+            texturesFileGpuSize += toMb(element.gpuSize);
         });
 
         // assemble statistics object
         return {
             textures: textures,
-            texturesSize: texturesFileSize
+            texturesSize: texturesFileSize,
+            texturesGpuSize: texturesFileGpuSize
         };
     }
 
@@ -313,13 +317,15 @@ class GltfView
         {
             return {
                 textures: [],
-                texturesSize: 0
+                texturesSize: 0,
+                texturesGpuSize: 0
             };
         }
 
         const toMb = (value) => { return value/1024/1024; };
 
         var texturesFileSize = 0;
+        var textureGPUSize = 0;
         const textures = [];
         const activeTextures = state.gltf.images;
         const activeSelectedTextures = state.compressorParameters.processedImages.map(index => activeTextures[index]);
@@ -373,12 +379,15 @@ class GltfView
             if(element.mimeType !== ImageMimeType.GLTEXTURE)
                 textures.push(texture);
             texturesFileSize += isIncluded ? fileSizeCompressed : fileSize;
+            textureGPUSize += isIncluded ? toMb(element.compressedGpuSize) : toMb(element.gpuSize);
+            
         });
 
         // assemble statistics object
         return {
             textures: textures,
-            texturesSize: texturesFileSize
+            texturesSize: texturesFileSize,
+            texturesGpuSize: textureGPUSize
         };
     }
 
