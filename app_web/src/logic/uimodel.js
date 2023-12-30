@@ -256,7 +256,7 @@ class UIModel
 
             map( (files) => {
                 // restructure the data by separating mainFile (gltf/glb) from additionalFiles
-                const mainFile = files.find( (file) => file.name.endsWith(".glb") || file.name.endsWith(".gltf"));
+                const mainFile = files.find( (file) => file.name.endsWith(".glb") || file.name.endsWith(".gltf") || file.name.endsWith(".vrm"));
                 const additionalFiles = files.filter( (file) => file !== mainFile);
                 return {mainFile: mainFile, additionalFiles: additionalFiles};
             }),
