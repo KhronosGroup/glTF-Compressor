@@ -31,7 +31,7 @@ class gltfWebGl
 
     setTexture(loc, gltf, textureInfo, texSlot, bindCompressed = false)
     {
-        if (loc === -1)
+        if (loc === null)
         {
             return false;
         }
@@ -40,14 +40,12 @@ class gltfWebGl
 
         if (gltfTex === undefined)
         {
-            console.warn("Texture is undefined: " + textureInfo.index);
             return false;
         }
 
         const image = gltf.images[gltfTex.source];
         if (image === undefined)
         {
-            console.warn("Image is undefined for texture: " + gltfTex.source);
             return false;
         }
 
@@ -94,7 +92,8 @@ class gltfWebGl
                 gltfTex.compressedGLTexture = this.context.createTexture();
             }
         }
-
+        image.glTexture = gltfTex.glTexture;
+        
         this.context.activeTexture(GL.TEXTURE0 + texSlot);
         this.context.bindTexture(gltfTex.type, bindCompressed? gltfTex.compressedGLTexture : gltfTex.glTexture);
 
@@ -218,7 +217,7 @@ class gltfWebGl
 
     enableAttribute(gltf, attributeLocation, gltfAccessor)
     {
-        if (attributeLocation === -1)
+        if (attributeLocation === null)
         {
             console.warn("Tried to access unknown attribute");
             return false;

@@ -1,3 +1,8 @@
+function toMb(value)
+{ 
+    return value/1024/1024; 
+}
+
 function nearestPowerOf2(n)
 {
     if (isPowerOf2(n))
@@ -21,4 +26,4 @@ function makeEven(n)
     return n;
 }
 
-export { nearestPowerOf2, isPowerOf2, makeEven };
+export { toMb, nearestPowerOf2, isPowerOf2, makeEven };

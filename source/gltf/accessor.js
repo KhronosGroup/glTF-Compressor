@@ -25,6 +25,31 @@ class gltfAccessor extends GltfObject
         this.normalizedTypedView = undefined;
     }
 
+    
+    // getTypedView provides a view to the accessors data in form of
+    // a TypedArray. This data can directly be passed to vertexAttribPointer
+    decodeMeshoptBuffer(gltf, bufferView)
+    {
+        const moptDecoder = gltf.moptDecoder;
+        const filter = bufferView.filter || 'NONE';
+        const buffer = gltf.buffers[bufferView.buffer];
+        const byteLength = bufferView.byteLength;
+        const byteStride = bufferView.byteStride;
+        const componentSize = this.getComponentSize(this.componentType);
+        //const componentCount = this.getComponentCount(this.type);
+        const componentCount = byteStride / componentSize;
+        const viewArrayLength = bufferView.count * componentCount * componentSize;
+        const accessorByteLength = this.count * componentCount * componentSize;
+        const bytes = (view) => new Uint8Array(view.buffer, view.byteOffset, view.byteLength);
+
+        const encoded = new Uint8Array(buffer.buffer, bufferView.byteOffset, byteLength);
+        const decoded = new Uint8Array(viewArrayLength);
+
+
+        moptDecoder.decodeGltfBuffer(bytes(decoded), bufferView.count, byteStride, encoded, bufferView.mode, filter);
+        return {buffer: decoded.buffer};
+    }
+
     // getTypedView provides a view to the accessors data in form of
     // a TypedArray. This data can directly be passed to vertexAttribPointer
     getTypedView(gltf)
@@ -36,10 +61,10 @@ class gltfAccessor extends GltfObject
 
         if (this.bufferView !== undefined)
         {
-            const bufferView = gltf.bufferViews[this.bufferView];
-            const buffer = gltf.buffers[bufferView.buffer];
-            const byteOffset = this.byteOffset + bufferView.byteOffset;
-
+            const isMeshOptCompressed = gltf.bufferViews[this.bufferView].extensions !== undefined && gltf.bufferViews[this.bufferView].extensions.EXT_meshopt_compression !== undefined
+            const bufferView = (!isMeshOptCompressed) ? gltf.bufferViews[this.bufferView] : gltf.bufferViews[this.bufferView].extensions.EXT_meshopt_compression;
+            const buffer = (!isMeshOptCompressed) ? gltf.buffers[bufferView.buffer] : this.decodeMeshoptBuffer(gltf, bufferView);
+            const byteOffset = this.byteOffset + ((!isMeshOptCompressed) ? bufferView.byteOffset : 0);
             const componentSize = this.getComponentSize(this.componentType);
             let componentCount = this.getComponentCount(this.type);
 
@@ -129,10 +154,10 @@ class gltfAccessor extends GltfObject
 
         if (this.bufferView !== undefined)
         {
-            const bufferView = gltf.bufferViews[this.bufferView];
-            const buffer = gltf.buffers[bufferView.buffer];
-            const byteOffset = this.byteOffset + bufferView.byteOffset;
-
+            const isMeshOptCompressed = gltf.bufferViews[this.bufferView].extensions !== undefined && gltf.bufferViews[this.bufferView].extensions.EXT_meshopt_compression !== undefined
+            const bufferView = (!isMeshOptCompressed) ? gltf.bufferViews[this.bufferView] : gltf.bufferViews[this.bufferView].extensions.EXT_meshopt_compression;
+            const buffer = (!isMeshOptCompressed) ? gltf.buffers[bufferView.buffer] : this.decodeMeshoptBuffer(gltf, bufferView);
+            const byteOffset = this.byteOffset + ((!isMeshOptCompressed) ? bufferView.byteOffset : 0);
             const componentSize = this.getComponentSize(this.componentType);
             const componentCount = this.getComponentCount(this.type);
             const arrayLength = this.count * componentCount;
@@ -319,6 +344,31 @@ class gltfAccessor extends GltfObject
             return new Float32Array(typedArray).map(c => c / 65535.0);
         default:
             return typedArray;
+        }
+    }
+
+    getSize()
+    {
+        return  this.getComponentCount(this.type) * 
+                this.getComponentSize(this.componentType) * 
+                this.count;
+    }
+
+    getComponentBitCount(componentType)
+    {
+        switch (componentType)
+        {
+        case GL.BYTE:
+        case GL.UNSIGNED_BYTE:
+            return 8;
+        case GL.SHORT:
+        case GL.UNSIGNED_SHORT:
+            return 16;
+        case GL.UNSIGNED_INT:
+        case GL.FLOAT:
+            return 32;
+        default:
+            return 0;
         }
     }
 

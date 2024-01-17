@@ -69,7 +69,7 @@ class ImageUtils
         const texture_dst = gl.createTexture();
         const vao = gl.createVertexArray();
         
-        console.log(gl.getError());
+        while(gl.getError());
         gl.bindTexture(gl.TEXTURE_2D, texture_dst);
         gl.texStorage2D(gl.TEXTURE_2D, 1, isSRGB? gl.SRGB8_ALPHA8 : gl.RGBA8, width, height); 
         
