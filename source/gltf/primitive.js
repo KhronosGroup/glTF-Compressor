@@ -58,7 +58,7 @@ class gltfPrimitive extends GltfObject
         const maxAttributes = webGlContext.getParameter(GL.MAX_VERTEX_ATTRIBS);
 
         // https://github.com/KhronosGroup/glTF/blob/master/specification/2.0/README.md#meshes
-
+        console.log('this', this);
         if (this.extensions !== undefined)
         {
             // Decode Draco compressed mesh:
@@ -294,13 +294,13 @@ class gltfPrimitive extends GltfObject
         const positionsAccessor = gltf.accessors[this.attributes.POSITION];
         //const positions = positionsAccessor.getNormalizedTypedView(gltf);
         const positions = positionsAccessor.getNormalizedDeinterlacedView(gltf);
-
+        console.log('this.indices', this.indices);
         if(this.indices !== undefined)
         {
             // Primitive has indices.
 
             const indicesAccessor = gltf.accessors[this.indices];
-
+            console.log('indicesAccessor', indicesAccessor);
             const indices = indicesAccessor.getTypedView(gltf);
 
             const acc = new Float32Array(3);
@@ -863,19 +863,31 @@ class gltfPrimitive extends GltfObject
     compressGeometryDRACO(options, gltf) {
         const encoderModule = gltf.dracoEncoder.module;
         const indices = (this.indices !== undefined) ? gltf.accessors[this.indices].getTypedView(gltf) : null;
-        const face_count = (this.indices !== undefined) ? indices.length / 3 : 0;
-        const accessor = (this.indices !== undefined) ? gltf.accessors[this.indices] : 0;
+        let attr_count = 0;
+        const accessor = (this.indices !== undefined) ? gltf.accessors[this.indices] : undefined;
         const mesh_builder = new encoderModule.MeshBuilder();
         const mesh = new encoderModule.Mesh();
         const encoder = new encoderModule.ExpertEncoder(mesh);
         const draco_attributes = {};
         const clamp = (x, min, max) => Math.max(min, Math.min(max, x));
-
-        const indices32 = new Uint32Array(indices.length);
-        for(var i = 0; i < indices.length; i++) {
-            indices32[i] = indices[i];
+        for (const glAttribute of this.glAttributes) {
+            const accessor = gltf.accessors[glAttribute.accessor];
+            const data = accessor.getTypedView(gltf);
+            const compCount = accessor.getComponentCount(accessor.type);
+            const compSize = accessor.getComponentSize(accessor.componentType);
+            const byteStride = compSize * compCount;
+            attr_count = data.byteLength / byteStride;
         }
+        const face_count = (this.indices !== undefined) ? indices.length / 3 : attr_count / 3;
 
+        const indices32 = (indices) ? new Uint32Array(indices.length) : new Uint32Array(face_count * 3);
+        for(var i = 0; i < indices32.length; i++) {
+            indices32[i] = (indices) ? indices[i] : i;
+        }
+        console.log('this.indices', this.indices);
+        console.log('indices32', indices32);
+        console.log('face_count', face_count);
+        console.log('attr_count', attr_count);
         if (face_count > 0) mesh_builder.AddFacesToMesh(mesh, face_count, indices32);
 
         encoder.SetTrackEncodedProperties(true);
@@ -944,16 +956,20 @@ class gltfPrimitive extends GltfObject
         bufferView.buffer = gltf.buffers.length - 1;
         bufferView.byteOffset = 0;
         bufferView.byteLength = buffer.byteLength;
-        bufferView.name = "DRACO Compressed " + this.indices.toString();
+        bufferView.name = "DRACO Compressed Data";
         gltf.bufferViews.push(bufferView);
-
+        console.log('draco buffer', buffer);
+        console.log('draco bufferView', bufferView);
+        console.log('draco_face_count', draco_face_count);
+        console.log('draco_attr_count', draco_attr_count);
+        console.log('accessor', accessor);
         // Create a new accessor for the indices:
         const accessor_compressed = new gltfAccessor();
         accessor_compressed.bufferView = gltf.bufferViews.length - 1;
         accessor_compressed.byteOffset = 0;
         accessor_compressed.count = draco_face_count * 3;
         accessor_compressed.type = "SCALAR";
-        accessor_compressed.componentType = accessor.componentType;
+        accessor_compressed.componentType = (accessor) ? accessor.componentType : GL.UNSIGNED_INT;
         gltf.accessors.push(accessor_compressed);
         
         this.indices = gltf.accessors.length - 1;

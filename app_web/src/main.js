@@ -962,26 +962,33 @@ export default async () => {
             });
         });
 
+        const danglingAccessors = [];
         meshes.forEach((mesh, index) => {
             const og_mesh = (mesh.original_mesh === undefined) ? mesh : gltf.meshes[mesh.original_mesh];
             const out_mesh = gltfJSONNew.meshes[index];
             mesh.primitives.forEach((prim, prim_index) => {
                 const og_prim = og_mesh.primitives[prim_index];
-                const og_accessor = og_gltf.accessors[og_prim.indices];
-                const og_bufferView = og_gltf.bufferViews[og_accessor.bufferView];
-
+                const og_accessor = (og_prim.indices) ? og_gltf.accessors[og_prim.indices] : undefined;
+                const og_bufferView = (og_accessor) ? og_gltf.bufferViews[og_accessor.bufferView] : undefined;
                 if (prim.extensions && prim.extensions.KHR_draco_mesh_compression) {
                     const draco = prim.extensions.KHR_draco_mesh_compression;
                     const accessor = gltf.accessors[prim.indices];
                     const bufferView = gltf.bufferViews[draco.bufferView];
                     const buffer = gltf.buffers[bufferView.buffer];
                     const out_prim = out_mesh.primitives[prim_index];
-                    const out_accessor = gltfJSONNew.accessors[og_prim.indices];
+                    // If the mesh contained index information, we reuse the previous accessor
+                    // If there was no index information we create an accessor at position 'prim.indices'
+                    if (!og_prim.indices && prim.indices >= gltfJSONNew.accessors.length) 
+                        gltfJSONNew.accessors[prim.indices] = { componentType: accessor.componentType, count: accessor.count, type: accessor.type };
+                    const out_accessor = gltfJSONNew.accessors[(og_prim.indices) ? og_prim.indices : prim.indices];
                     usesDraco = true;
-
-                    out_prim.indices = og_prim.indices;
+                    console.log('prim.indices', prim.indices);
+                    console.log('accessor', accessor);
+                    console.log('out_accessor', out_accessor);
+                    console.log('og_prim', og_prim);
+                    out_prim.indices = (og_prim.indices) ? og_prim.indices : prim.indices;
                     out_prim.material = og_prim.material;
-                    out_prim.mode = og_prim.mode;   
+                    out_prim.mode = (og_prim.mode) ? og_prim.mode : 4;   
                     out_prim.extensions = {
                         KHR_draco_mesh_compression: {
                             attributes: draco.attributes,
@@ -1001,8 +1008,9 @@ export default async () => {
                         out_accessor.byteOffset = undefined;
                     });
 
-                    const mem_buffer = mem_buffers[og_bufferView.buffer];
-                    bufferViews.push({ buffer: og_bufferView.buffer, byteOffset: mem_buffer.byteLength, byteLength: buffer.buffer.byteLength })
+                    const mem_buffer_index = (og_bufferView) ? og_bufferView.buffer : 0;
+                    const mem_buffer = mem_buffers[mem_buffer_index];
+                    bufferViews.push({ buffer: mem_buffer_index, byteOffset: mem_buffer.byteLength, byteLength: buffer.buffer.byteLength })
                     
                     mem_buffer.data = concat(mem_buffer.data, buffer.buffer);
                     mem_buffer.byteLength = mem_buffer.data.byteLength;
