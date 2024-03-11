@@ -1,6 +1,6 @@
 
 import axios from 'axios';
-import { glTF } from '../gltf/gltf.js';
+import { glTF, gltfAccessor } from '../gltf/gltf.js';
 import { getIsGlb, getContainingFolder } from '../gltf/utils.js';
 import { GlbParser } from './glb_parser.js';
 import { gltfLoader } from "./loader.js";
@@ -9,11 +9,14 @@ import { gltfTexture, gltfTextureInfo } from '../gltf/texture.js';
 import { gltfSampler } from '../gltf/sampler.js';
 import { GL } from '../Renderer/webgl.js';
 import { iblSampler } from '../ibl_sampler.js';
+import init from '../libs/mikktspace.js';
+import mikktspace from '../libs/mikktspace_bg.wasm';
 
 
 import { AsyncFileReader } from './async_file_reader.js';
 
-import { DracoDecoder } from './draco.js';
+import { MeshoptEncoder, MeshoptDecoder, MeshoptSimplifier } from 'meshoptimizer';
+import { DracoDecoder, DracoEncoder } from './draco.js';
 import { KtxDecoder } from './ktx.js';
 import { WebPLibrary } from './webp.js';
 
@@ -70,10 +73,10 @@ class ResourceLoader
                 console.error("Only .glb files can be loaded from an array buffer");
             }
         }
-        else if (typeof (File) !== 'undefined' && gltfFile instanceof File)
+        else if (Array.isArray(gltfFile) && typeof(File) !== 'undefined' && gltfFile[1] instanceof File)
         {
-            let fileContent = gltfFile;
-            filename = gltfFile.name;
+            let fileContent = gltfFile[1];
+            filename = gltfFile[1].name;
             isGlb = getIsGlb(filename);
             if (isGlb)
             {
@@ -102,10 +105,18 @@ class ResourceLoader
         const gltf = new glTF(filename);
         gltf.ktxDecoder = this.view.ktxDecoder;
         gltf.ktxEncoder = this.view.ktxDecoder;
-        gltf.webpLibrary = this.view.webpLibrary; // TODO: Nick
+        gltf.webpLibrary = this.view.webpLibrary;
+        gltf.dracoEncoder = this.view.dracoEncoder;
+        gltf.dracoDecoder = this.view.dracoDecoder;
+        gltf.moptEncoder = MeshoptEncoder;
+        gltf.moptDecoder = MeshoptDecoder;
+        gltf.moptSimplifier = MeshoptSimplifier;
+        gltf.view = this.view;
+
         //Make sure draco decoder instance is ready
         gltf.fromJson(json);
-
+        console.log('json', json);
+        console.log('gltf', gltf);
         // because the gltf image paths are not relative
         // to the gltf, we have to resolve all image paths before that
         for (const image of gltf.images)
@@ -113,7 +124,9 @@ class ResourceLoader
             image.resolveRelativePath(getContainingFolder(gltf.path));
         }
 
+        await init(await mikktspace());
         await gltfLoader.load(gltf, this.view.context, buffers);
+        gltf.og_gltf = { buffers: [...gltf.buffers.slice(0, json.buffers.length)], accessors: [...gltf.accessors], bufferViews: [...gltf.bufferViews], images: [...gltf.images]  };
 
         return gltf;
     }
@@ -186,7 +199,22 @@ class ResourceLoader
         {
             await dracoDecoder.ready();
         }
+        this.view.dracoDecoder = dracoDecoder;
     }
+
+    /**
+     * initDracoEncodeLib must be called before compressing gltf files with draco
+     * @param {*} [externalDracoEncodeLib] external draco encode library (for example from a CDN)
+     */
+     async initDracoEncodeLib(externalDracoEncodeLib)
+     {
+         const dracoEncoder = new DracoEncoder(externalDracoEncodeLib);
+         if (dracoEncoder !== undefined)
+         {
+             await dracoEncoder.ready();
+         }
+         this.view.dracoEncoder = dracoEncoder;
+     }
 }
 
 async function _loadEnvironmentFromPanorama(imageHDR, view, luts)

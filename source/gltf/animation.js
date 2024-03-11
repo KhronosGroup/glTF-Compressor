@@ -73,18 +73,30 @@ class gltfAnimation extends GltfObject
             switch(channel.target.path)
             {
             case InterpolationPath.TRANSLATION:
-                node.applyTranslationAnimation(interpolator.interpolate(gltf, channel, sampler, totalTime, 3, this.maxTime));
+                const translate = interpolator.interpolate(gltf, channel, sampler, totalTime, 3, this.maxTime);
+                node.applyTranslationAnimation(translate);
+                if (!node.compressedNode) break;
+                node.compressedNode.applyTranslationAnimation(translate);
                 break;
             case InterpolationPath.ROTATION:
-                node.applyRotationAnimation(interpolator.interpolate(gltf, channel, sampler, totalTime, 4, this.maxTime));
+                const rotate = interpolator.interpolate(gltf, channel, sampler, totalTime, 4, this.maxTime);
+                node.applyRotationAnimation(rotate);
+                if (!node.compressedNode) break;
+                node.compressedNode.applyRotationAnimation(rotate);
                 break;
             case InterpolationPath.SCALE:
-                node.applyScaleAnimation(interpolator.interpolate(gltf, channel, sampler, totalTime, 3, this.maxTime));
+                const scale = interpolator.interpolate(gltf, channel, sampler, totalTime, 3, this.maxTime);
+                node.applyScaleAnimation(scale);
+                if (!node.compressedNode) break;
+                node.compressedNode.applyScaleAnimation(scale);
                 break;
             case InterpolationPath.WEIGHTS:
             {
                 const mesh = gltf.meshes[node.mesh];
                 mesh.weightsAnimated = interpolator.interpolate(gltf, channel, sampler, totalTime, mesh.weights.length, this.maxTime);
+                if (!node.compressedNode) break;
+                const c_mesh = node.compressedNode.compressedMesh;
+                c_mesh.weightsAnimated = mesh.weightsAnimated && mesh.weightsAnimated.map((e, i) => e / node.compressedNode.scale[i % 3]);
                 break;
             }
             }

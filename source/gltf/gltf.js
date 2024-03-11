@@ -42,8 +42,11 @@ class glTF extends GltfObject
         this.skins = [];
         this.path = file;
 
-        // GSV-KTX
+        // gltfCompressor
         this.originalJSON = undefined;
+        this.compressionVersion = 0;
+        this.primitives = [];
+        this.compressedPrimitives = [];
     }
 
     initGl(webGlContext)
@@ -159,6 +162,41 @@ class glTF extends GltfObject
         }
 
         return nonDisjointAnimations;
+    }
+
+    findPrimitive(prim)
+    {
+        return this.primitives.findIndex(e => {
+            const sameMode = e.mode == prim.mode;
+            const sameIndices = e.indices == prim.indices;
+            const samePositions = e.attributes.POSITION == prim.attributes.POSITION;
+            const sameNormals = e.attributes.NORMAL == prim.attributes.NORMAL;
+            const sameTangents = e.attributes.TANGENT == prim.attributes.TANGENT;
+            const sameTEXCOORD_0 = e.attributes.TEXCOORD_0 == prim.attributes.TEXCOORD_0;
+            const sameTEXCOORD_1 = e.attributes.TEXCOORD_1 == prim.attributes.TEXCOORD_1;
+            const sameCOLOR_0 = e.attributes.COLOR_0 == prim.attributes.COLOR_0;
+            const sameJOINTS_0 = e.attributes.JOINTS_0 == prim.attributes.JOINTS_0;
+            const sameWEIGHTS_0 = e.attributes.WEIGHTS_0 == prim.attributes.WEIGHTS_0;
+
+            return sameMode && sameIndices && samePositions && sameNormals && sameTangents && sameTEXCOORD_0 && sameTEXCOORD_1 && sameCOLOR_0 && sameJOINTS_0 && sameWEIGHTS_0;
+        });
+    }
+
+    fillPrimitiveList()
+    {
+        this.compressionVersion = 0;
+        for(const mesh of this.meshes)
+        {
+            for(const primitive of mesh.primitives)
+            {
+                if(this.findPrimitive(primitive) == -1)
+                {
+                    primitive.compress_revision = -1;
+                    this.primitives.push(primitive);
+                    this.compressedPrimitives.push(primitive);
+                }
+            }
+        }
     }
 }
 

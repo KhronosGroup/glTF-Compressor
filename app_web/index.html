@@ -4,11 +4,11 @@
 <head>
     <meta charset="utf-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <title>glTF Compressor for KTX</title>
+    <title>glTF Compressor</title>
 
     <meta name="author" content="Khronos Group Inc.">
-    <meta name="description" content="The official glTF Compressor for KTX">
-    <meta name="keywords" content="glTF, WebGL, Sample, Viewer, PBR, KTX">
+    <meta name="description" content="The official glTF Compressor">
+    <meta name="keywords" content="glTF, WebGL, Sample, Viewer, Compressor, PBR, texture, KTX, geometry, Draco, MeshOpt">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <link rel="stylesheet" href="GltfSVApp.css">
@@ -23,6 +23,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
 
     <script src="https://www.gstatic.com/draco/v1/decoders/draco_decoder_gltf.js"></script>
+    <script src="libs/draco_encoder.js"></script>
     <script src="libs/libktx.js"></script>
     <script src="libs/libwebp.js"></script>
 </head>
@@ -87,13 +88,78 @@
     </div>
 </script>
 
+
+ <!-- item template -->
+ <script id="tree-view-node-template" type="text/x-template">
+    <li>
+        <div style="display: flex; gap: 10px">
+            <div @click="toggle">
+                <span v-if="isOpen && isFolder" style="display:inline-block; transform: rotate(90deg)">&#8227;</span>
+                <span v-else-if="isOpen && !isFolder" style="display:inline-block">&#149;</span>
+                <span v-else style="display:inline-block">&#8227;</span>
+                <div v-if="hasMesh" style="display:inline-block; font-size: 16px; font-weight: bold;">
+                    {{ item.name }}
+                </div>
+                <div v-else style="display:inline-block; font-size: 16px;">
+                    {{ item.name }}
+                </div>
+            </div>
+            <input 
+                type="checkbox"
+                :id="'mesh_node_' + item.name"
+                class="tree-checkbox"
+                @click="checkChildren"
+            />
+        </div>
+        <ul v-show="isOpen" v-if="isFolder">
+            <tree-view-node
+                class="mesh_node_tree"
+                v-for="(child, index) in item.children"
+                :key="index"
+                :item="child"
+            ></tree-view-node>
+        </ul>
+    </li>
+</script>
+
+ <!-- item template -->
+<script id="geometryTable" type="text/x-template">
+    <div class="container_geometry">
+        <table id="geometry_table">
+        <!-- <div v-for="(item, i) in data" :key="i" :id="'mesh_table_row_' + item.name">
+                <div :id="'mesh_row_' + item.name"> 
+                    <tr>
+                        <td class="td_style">Name</td>
+                        <td colspan="2"> {{ item.name }}</td>
+                    </tr>
+                    <tr>
+                        <td class="td_style">Compression</td>
+                        <td class="td_style">Before</td>
+                        <td class="td_style">After</td>
+                    </tr>
+                    <tr>
+                        <td class="td_style">Format</td>
+                        <td class="td_style"></td>
+                        <td class="td_style"></td>
+                    </tr>
+                    <tr>
+                        <td class="td_style">DiskSize</td>
+                        <td class="td_style">{{ item.size }}</td>
+                        <td class="td_style"></td>
+                    </tr>
+                    </div> 
+            </div> -->
+        </table>
+    </div>
+</script>
+
 <script id="textureDetailsTemplate" type="text/x-template">
     <b-field label="TEXTURE DETAILS" class="subtitle">
         <div class="textures_container">
             <div v-for="(texture, i) in data" :key="i">
                 <div class="cardHeader">
                     <div class="container_img" :id="'container_img_' + i">
-                        <input type="checkbox" :id="'image-' + i" checked/>
+                        <input type="checkbox" class="texture-checkbox" :id="'image-' + i"/>
                         <b-button v-if="texture.isCompleted" v-on:click="togglePressed(i)"
                             style="font-size: inherit; margin-top: -8px;">
                             {{ name[i] }}
@@ -163,6 +229,7 @@
                 <b-slider-tick :value="0.1">{{ compressionBefore }}</b-slider-tick>
                 <b-slider-tick :value="0.9">{{ compressionAfter }}</b-slider-tick>
             </b-slider>
+            <div v-if="compressionCompleted && comparisonSlider" class="custom-slider" id="custom-slider"></div>
 
             <div class="canvasUIMaximize">
                 <img v-bind:src="[fullscreen ? 'assets/ui/Icon_Collapse.svg' : 'assets/ui/Icon_Expand.svg']"
@@ -241,17 +308,17 @@
 
                             <b-field label="Variants" class="subtitle"
                                 v-bind:style="[materialVariants.length <= 1 ? {'display': 'none'} : {}]">
-                                <b-field v-for="item in materialVariants" v-bind:key="item.titel"
+                                <b-field v-for="item in materialVariants" v-bind:key="item"
                                     v-bind:style="[materialVariants.length > 5 ? {'display': 'none'} : {}]">
-                                    <b-radio v-bind:native-value="item.title" v-stream:input="variantChanged$"
+                                    <b-radio v-bind:native-value="item" v-stream:input="variantChanged$"
                                         v-model="selectedVariant">
-                                        {{ item.title }}
+                                        {{ item }}
                                     </b-radio>
                                 </b-field>
                                 <b-select v-model="selectedVariant" v-stream:input="variantChanged$"
                                     v-bind:style="[materialVariants.length > 5 ? {} : {'display': 'none'}]">
-                                    <option v-for="(item) in materialVariants" v-bind:value="item.title">
-                                        {{ item.title }}
+                                    <option v-for="(item) in materialVariants" v-bind:value="item">
+                                        {{ item }}
                                     </option>
                                 </b-select>
                             </b-field>
@@ -370,7 +437,7 @@
                     </b-tab-item>
 
 
-                    <b-tab-item label="XMP" icon="video" class="tabItemScrollable tab-item">
+                    <b-tab-item label="Credits" icon="video" class="tabItemScrollable tab-item">
                         <template #header>
                             <div @click="collapseActiveTab($event, 3)"
                                 v-bind:style="[tabsHidden === false && activeTab === 3 ? {'height': '100%'} : {}]">
@@ -379,14 +446,17 @@
                                     v-bind:width="[tabsHidden === false && activeTab === 3 ? '50px' : '30px']"
                                     v-bind:style="[tabsHidden === false && activeTab === 3 ? {'height': '100%'} : {}]">
                                 <span
-                                    v-bind:style="[tabsHidden === false && activeTab === 3 ? {'display': 'none'} : {}]">XMP</span>
+                                    v-bind:style="[tabsHidden === false && activeTab === 3 ? {'display': 'none'} : {}]">Credits</span>
                             </div>
                         </template>
 
                         <div class="tabContent">
                             <img src="assets/ui/Navigation_right_20px.svg" width="30px"
                                 @click="collapseActiveTab($event, 3)">
-                            <h2 class="title is-spaced">XMP</h2>
+                            <h2 class="title">Model Credits</h2>
+                            <div class="modelCredit"><i>Copyright:</i><br/>{{ assetCopyright }}</div>
+                            <div class="modelCredit"><i>Generated by:</i><br/>{{ assetGenerator }}</div>
+                            <h3 class="title">{{ xmp ? "XMP" : "" }}</h3>
                             <json-to-ui-template v-bind:data="xmp" v-bind:isinner="false"></json-to-ui-template>
                         </div>
                     </b-tab-item>
@@ -399,263 +469,622 @@
                         </template>
                     </b-tab-item>-->
 
-                    <b-tab-item label="TextureCompressor" icon="texture" class="tabItemScrollable tab-item">
+                    <b-tab-item label="Compressor" icon="texture" class="tabItemScrollable tab-item">
                         <template #header>
                             <div @click="collapseActiveTab($event, 4)"
                                 v-bind:style="[tabsHidden === false && activeTab === 4 ? {'height': '100%'} : {}]">
-                                <img v-bind:src="[tabsHidden === false && activeTab === 4 ? 'assets/ui/Texture Compressor 50X50.svg' : 'assets/ui/Texture Compressor 30X30.svg']"
+                                <img v-bind:src="[tabsHidden === false && activeTab === 4 ? 'assets/ui/Compressor 50X50.svg' : 'assets/ui/Compressor 30X30.svg']"
                                     v-bind:width="[tabsHidden === false && activeTab === 4 ? '50px' : '30px']"
                                     v-bind:style="[tabsHidden === false && activeTab === 4 ? {'height': '100%'} : {}]">
                                 <span
-                                    v-bind:style="[tabsHidden === false && activeTab === 4 ? {'display': 'none'} : {}]">Texture Compressor</span>
+                                    v-bind:style="[tabsHidden === false && activeTab === 4 ? {'display': 'none'} : {}]">Compressor</span>
                             </div>
                         </template>
 
                         <div class="tabContent">
                             <img src="assets/ui/Navigation_right_20px.svg" width="30px"
                                 @click="collapseActiveTab($event, 4)">
-                            <h2 class="title is-spaced">Texture Compressor</h2>
-
-                            <div v-if="texturesStatistics.length === 0">
-                                <b-field label="NO TEXTURES FOUND" class="subtitle">
-                                </b-field>
-                            </div>
-                            <div v-else>  
-                                <texture-details v-bind:data="texturesStatistics" v-stream:buttonclicked="comparisonViewChanged$">
-                                </texture-details>
+                            <h2 class="title is-spaced">Compressor</h2>
                             
-                                <b-field label="Select by Type" class="smallerLabel">
-                                    <b-select v-stream:input="texturesSelectionChanged$"
-                                        v-model="selectedTextureType">
-                                        <option v-for="(item) in textureType" v-bind:value="item.title">
-                                            {{ item.title }}
-                                        </option>
-                                    </b-select>
-                                </b-field>
-
-                                <b-field label="COMPRESSION SETTINGS" class="subtitle">
-                                </b-field>
-
-                                <b-field label="Image Type" class="smallerLabel">
-                                    <b-select v-stream:input="compressionSelectionChanged$"
-                                        v-model="selectedCompressionType">
-                                        <option v-for="(item) in compressionType" v-bind:value="item.title">
-                                            {{ item.title }}
-                                        </option>
-                                    </b-select>
-                                </b-field>
-
-                                <b-field label="Image Resolution Downscale" class="smallerLabel">
-                                    <b-select v-stream:input="compressionResolutionSelectionChanged$"
-                                        v-model="selectedCompressionResolution">
-                                        <option v-for="(item) in compressionResolution" v-bind:value="item.title">
-                                            {{ item.title }}
-                                        </option>
-                                    </b-select>
-                                </b-field>
-
-                                <div v-if="selectedCompressionType === 'KTX2'">
-                                    <b-field label="Image Encoding" class="smallerLabel">
-                                        <b-select v-stream:input="compressionEncodingSelectionChanged$"
-                                            v-model="selectedCompressionEncoding">
-                                            <option v-for="(item) in compressionEncoding" v-bind:value="item.title">
-                                                {{ item.title }}
-                                            </option>
-                                        </b-select>
+                            <b-button @click="toggleGeometryCompressorDisplay" class="divDropButton">
+                                <i class="fa fa-shapes"></i>
+                                &nbsp; Geometry Compressor &nbsp;
+                                <i id="geometryCompressorFA" class="fa fa-caret-right fa-sm"></i>
+                            </b-button>
+                            <div v-show="geometryCompressorDisplay" class="collapseArea">
+                                <div v-if="geometryStatistics.length === 0">
+                                    <b-field label="NO GEOMETRY FOUND" class="subtitle">
                                     </b-field>
-                                    <div v-if="selectedCompressionEncoding === 'UASTC'">
-                                        <b-field label="UASTC SETTINGS" class="smallerLabel">
-                                            <b-field label="Level" class="smallerLabel">
-                                                <b-select v-stream:input="compressedUASTC_FlagsChanged$" v-model="selectedCompressionUASTC_Flags">
-                                                    <option v-for="(item) in compressionUASTC_Flags" v-bind:value="item.title">
+                                </div>
+                                <div v-else>
+                                    <b-field label="GEOMETRY NODES" class="subtitle">
+                                    </b-field>
+                                    <!-- <button class="button" style="height: 1em;" @click="toggleMeshNodeTree" ref="toggleMeshNodeTreeBtn">Collapse</button> -->
+                                    <ul id="tree-view" class="mesh_node_tree_container">
+                                        <tree-view-node
+                                            class="mesh_node_tree"
+                                            :item="geometryStatistics"
+                                        ></tree-view-node>
+                                    </ul>
+
+                                    <b-field label="GEOMETRY MESHES" class="subtitle">
+                                    </b-field>
+
+                                    <b-switch v-model="enableMeshHighlighting" style="margin-bottom: 10px;">Highlight Selected
+                                    </b-switch>
+
+                                    <geometry-template style="margin-bottom: 10px;">
+                                    </geometry-template>
+
+                                    <b-field label="COMPRESSION SETTINGS" class="subtitle">
+                                    </b-field>
+
+                                    <b-field label="Encoding Type" class="smallerLabel">
+                                    </b-field>
+                                    <b-select v-stream:input="compressionGeometrySelectionChanged$"
+                                        v-model="selectedCompressionGeometryType">
+                                        <option v-for="(item) in filteredCompressionGeometryItems" v-bind:value="item.title">
+                                            {{ item.title }}
+                                        </option>
+                                    </b-select>
+                                    
+                                    <div v-show="selectedCompressionGeometryType === 'Draco'">
+                                        <b-field label="Encoding Method" class="smallerLabel">
+                                            <b-select v-stream:input="compressionDracoEncodingMethodSelectionChanged$"
+                                                v-model="selectedCompressionDracoEncodingMethod">
+                                                <option v-for="(item) in compressionDracoEncodingMethods" v-bind:value="item.title">
+                                                    {{ item.title }}
+                                                </option>
+                                            </b-select>
+                                        </b-field>
+                                        <b-field label="Compression Speed" class="smallerLabel">
+                                            <b-slider rounded v-model="compressionSpeedDraco" :min="0" v-bind:max="10" :step=1
+                                                class="iblIntensitySlider" v-stream:input="compressionSpeedDracoChanged$">
+                                                <b-slider-tick :value="0" class="iblIntensitySliderMarker">0</b-slider-tick>
+                                                <b-slider-tick :value="10" class="iblIntensitySliderMarker">10</b-slider-tick>
+                                            </b-slider>
+                                        </b-field>
+                                        <b-field label="Decompression Speed" class="smallerLabel">
+                                            <b-slider rounded v-model="decompressionSpeedDraco" :min="0" v-bind:max="10" :step=1
+                                                class="iblIntensitySlider" v-stream:input="decompressionSpeedDracoChanged$">
+                                                <b-slider-tick :value="0" class="iblIntensitySliderMarker">0</b-slider-tick>
+                                                <b-slider-tick :value="10" class="iblIntensitySliderMarker">10</b-slider-tick>
+                                            </b-slider>
+                                        </b-field>
+                                        <b-field label="POSITION Quantization Bits" class="smallerLabel">
+                                            <b-slider rounded v-model="compressionDracoQuantizationPositionQuantBits" :min="0" v-bind:max="30" :step=1
+                                                class="iblIntensitySlider" v-stream:input="compressionDracoQuantizationPositionQuantBitsChanged$">
+                                                <b-slider-tick :value="0" class="iblIntensitySliderMarker">0</b-slider-tick>
+                                                <b-slider-tick :value="30" class="iblIntensitySliderMarker">30</b-slider-tick>
+                                            </b-slider>
+                                        </b-field>
+                                        <b-field label="NORMAL Quantization Bits" class="smallerLabel">
+                                            <b-slider rounded v-model="compressionDracoQuantizationNormalQuantBits" :min="0" v-bind:max="30" :step=1
+                                                class="iblIntensitySlider" v-stream:input="compressionDracoQuantizationNormalQuantBitsChanged$">
+                                                <b-slider-tick :value="0" class="iblIntensitySliderMarker">0</b-slider-tick>
+                                                <b-slider-tick :value="30" class="iblIntensitySliderMarker">30</b-slider-tick>
+                                            </b-slider>
+                                        </b-field>
+                                        <b-field label="COLOR Quantization Bits" class="smallerLabel">
+                                            <b-slider rounded v-model="compressionDracoQuantizationColorQuantBits" :min="0" v-bind:max="30" :step=1
+                                                class="iblIntensitySlider" v-stream:input="compressionDracoQuantizationColorQuantBitsChanged$">
+                                                <b-slider-tick :value="0" class="iblIntensitySliderMarker">0</b-slider-tick>
+                                                <b-slider-tick :value="30" class="iblIntensitySliderMarker">30</b-slider-tick>
+                                            </b-slider>
+                                        </b-field>
+                                        <b-field label="TEXCOORD Quantization Bits" class="smallerLabel">
+                                            <b-slider rounded v-model="compressionDracoQuantizationTexcoordQuantBits" :min="0" v-bind:max="30" :step=1
+                                                class="iblIntensitySlider" v-stream:input="compressionDracoQuantizationTexcoordQuantBitsChanged$">
+                                                <b-slider-tick :value="0" class="iblIntensitySliderMarker">0</b-slider-tick>
+                                                <b-slider-tick :value="30" class="iblIntensitySliderMarker">30</b-slider-tick>
+                                            </b-slider>
+                                        </b-field>
+                                        <b-field label="TANGENT Quantization Bits" class="smallerLabel">
+                                            <b-slider rounded v-model="compressionDracoQuantizationTangentQuantBits" :min="0" v-bind:max="30" :step=1
+                                                class="iblIntensitySlider" v-stream:input="compressionDracoQuantizationTangentQuantBitsChanged$">
+                                                <b-slider-tick :value="0" class="iblIntensitySliderMarker">0</b-slider-tick>
+                                                <b-slider-tick :value="30" class="iblIntensitySliderMarker">30</b-slider-tick>
+                                            </b-slider>
+                                        </b-field>
+                                        <b-field label="WEIGHTS Quantization Bits" class="smallerLabel">
+                                            <b-slider rounded v-model="compressionDracoQuantizationWeightQuantBits" :min="0" v-bind:max="30" :step=1
+                                                class="iblIntensitySlider" v-stream:input="compressionDracoQuantizationWeightQuantBitsChanged$">
+                                                <b-slider-tick :value="0" class="iblIntensitySliderMarker">0</b-slider-tick>
+                                                <b-slider-tick :value="30" class="iblIntensitySliderMarker">30</b-slider-tick>
+                                            </b-slider>
+                                        </b-field>
+                                        <b-field label="JOINTS Quantization Bits" class="smallerLabel">
+                                            <b-slider rounded v-model="compressionDracoQuantizationJointQuantBits" :min="0" v-bind:max="30" :step=1
+                                                class="iblIntensitySlider" v-stream:input="compressionDracoQuantizationJointQuantBitsChanged$">
+                                                <b-slider-tick :value="0" class="iblIntensitySliderMarker">0</b-slider-tick>
+                                                <b-slider-tick :value="30" class="iblIntensitySliderMarker">30</b-slider-tick>
+                                            </b-slider>
+                                        </b-field>
+                                    </div>
+                                    <div v-show="selectedCompressionGeometryType === 'MeshQuantization'">
+                                        <b-field label="POSITION Attribute Type" class="smallerLabel">
+                                            <b-select v-stream:input="compressionQuantizationPositionTypeSelectionChanged$"
+                                                v-model="selectedCompressionQuantizationPosition">
+                                                <option v-for="(item) in compressionQuantizationPositionTypes" v-bind:value="item.title">
+                                                    {{ item.title }}
+                                                </option>
+                                            </b-select>
+                                        </b-field>
+
+                                        <b-field label="NORMAL Attribute Type" class="smallerLabel">
+                                            <b-select v-stream:input="compressionQuantizationNormalTypeSelectionChanged$"
+                                                v-model="selectedCompressionQuantizationNormal">
+                                                <option v-for="(item) in compressionQuantizationNormalTypes" v-bind:value="item.title">
+                                                    {{ item.title }}
+                                                </option>
+                                            </b-select>
+                                        </b-field>
+
+                                        <b-field label="TANGENT Attribute Type" class="smallerLabel">
+                                            <b-select v-stream:input="compressionQuantizationTangentTypeSelectionChanged$"
+                                                v-model="selectedCompressionQuantizationTangent">
+                                                <option v-for="(item) in compressionQuantizationTangentTypes" v-bind:value="item.title">
+                                                    {{ item.title }}
+                                                </option>
+                                            </b-select>
+                                        </b-field>
+
+                                        <b-field label="TEXCOORD 0 Attribute Type" class="smallerLabel">
+                                            <b-select v-stream:input="compressionQuantizationTexCoords0TypeSelectionChanged$"
+                                                v-model="selectedCompressionQuantizationTexCoords0">
+                                                <option v-for="(item) in compressionQuantizationTexCoordsTypes" v-bind:value="item.title">
+                                                    {{ item.title }}
+                                                </option>
+                                            </b-select>
+                                        </b-field>
+
+                                        <b-field label="TEXCOORD 1 Attribute Type" class="smallerLabel">
+                                            <b-select v-stream:input="compressionQuantizationTexCoords1TypeSelectionChanged$"
+                                                v-model="selectedCompressionQuantizationTexCoords1">
+                                                <option v-for="(item) in compressionQuantizationTexCoordsTypes" v-bind:value="item.title">
+                                                    {{ item.title }}
+                                                </option>
+                                            </b-select>
+                                        </b-field>
+                                    </div>
+                                    <div v-show="selectedCompressionGeometryType === 'MeshOpt'">
+                                        <b-field label="POSITION Attribute Type" class="smallerLabel">
+                                            <b-select v-stream:input="compressionMOptQuantizationPositionChanged$"
+                                                v-model="compressionMOptQuantizationPosition">
+                                                <option v-for="(item) in compressionQuantizationPositionTypes" v-bind:value="item.title">
+                                                    {{ item.title }}
+                                                </option>
+                                            </b-select>
+                                        </b-field>
+                                        <b-field label="POSITION Filter" class="smallerLabel">
+                                            <b-select v-stream:input="positionFilterChanged$"
+                                                v-model="positionFilter">
+                                                <option v-for="(item) in compressionMeshOptFilterMethods" v-bind:value="item.title">
+                                                    {{ item.title }}
+                                                </option>
+                                            </b-select>
+                                        </b-field>
+                                        <div v-show="positionFilter === 'EXPONENTIAL'">
+                                            <b-field label="POSITION Filter Mode" class="smallerLabel">
+                                                <b-select v-stream:input="positionFilterModeChanged$"
+                                                    v-model="positionFilterMode">
+                                                    <option v-for="(item) in compressionMeshOptFilterModes" v-bind:value="item.title">
                                                         {{ item.title }}
                                                     </option>
                                                 </b-select>
                                             </b-field>
-                                            <b-switch v-model="selectedCompressionUASTC_Rdo" v-stream:input="compressedUASTC_RdoChanged$">Supercompression 
-                                            </b-switch>
-                                            <div v-if="selectedCompressionUASTC_Rdo">
-                                                
-                                                <b-field label="Algorithm" class="smallerLabel">
-                                                    <b-select v-stream:input="compressionUASTC_Rdo_AlgorithmSelectionChanged$"
-                                                        v-model="selectedCompressionUASTC_Rdo_Algorithm">
-                                                        <option v-for="(item) in compressionUASTC_Rdo_Algorithms" v-bind:value="item.title">
+                                        </div>
+                                        <div v-show="positionFilter !== 'NONE'">
+                                            <b-field label="POSITION Filter Bits" class="smallerLabel">
+                                                <b-slider rounded v-model="positionFilterBits" :min="4" v-bind:max="32" :step=4
+                                                    class="iblIntensitySlider" v-stream:input="positionFilterBitsChanged$">
+                                                    <b-slider-tick :value="4" class="iblIntensitySliderMarker">4</b-slider-tick>
+                                                    <b-slider-tick :value="32" class="iblIntensitySliderMarker">32</b-slider-tick>
+                                                </b-slider>
+                                            </b-field>
+                                        </div>
+
+                                        <b-field label="NORMAL Attribute Type" class="smallerLabel">
+                                            <b-select v-stream:input="compressionMOptQuantizationNormalChanged$"
+                                                v-model="compressionMOptQuantizationNormal">
+                                                <option v-for="(item) in compressionQuantizationNormalTypes" v-bind:value="item.title">
+                                                    {{ item.title }}
+                                                </option>
+                                            </b-select>
+                                        </b-field>
+                                        <b-field label="NORMAL Filter" class="smallerLabel">
+                                            <b-select v-stream:input="normalFilterChanged$"
+                                                v-model="normalFilter">
+                                                <option v-for="(item) in compressionMeshOptFilterMethods" v-bind:value="item.title">
+                                                    {{ item.title }}
+                                                </option>
+                                            </b-select>
+                                        </b-field>
+                                        <div v-if="tangentFilter === 'EXPONENTIAL'">
+                                            <b-field label="NORMAL Filter Mode" class="smallerLabel">
+                                                <b-select v-stream:input="normalFilterModeChanged$"
+                                                    v-model="normalFilterMode">
+                                                    <option v-for="(item) in compressionMeshOptFilterModes" v-bind:value="item.title">
+                                                        {{ item.title }}
+                                                    </option>
+                                                </b-select>
+                                            </b-field>
+                                        </div>
+                                        <div v-if="normalFilter !== 'NONE'">
+                                            <b-field label="NORMAL Filter Bits" class="smallerLabel">
+                                                <b-slider rounded v-model="normalFilterBits" :min="4" v-bind:max="32" :step=4
+                                                    class="iblIntensitySlider" v-stream:input="normalFilterBitsChanged$">
+                                                    <b-slider-tick :value="4" class="iblIntensitySliderMarker">4</b-slider-tick>
+                                                    <b-slider-tick :value="32" class="iblIntensitySliderMarker">32</b-slider-tick>
+                                                </b-slider>
+                                            </b-field>
+                                        </div>
+
+
+                                        <b-field label="TANGENT Attribute Type" class="smallerLabel">
+                                            <b-select v-stream:input="compressionMOptQuantizationTangentChanged$"
+                                                v-model="compressionMOptQuantizationTangent">
+                                                <option v-for="(item) in compressionQuantizationTangentTypes" v-bind:value="item.title">
+                                                    {{ item.title }}
+                                                </option>
+                                            </b-select>
+                                        </b-field>
+                                        <b-field label="TANGENT Filter" class="smallerLabel">
+                                            <b-select v-stream:input="tangentFilterChanged$"
+                                                v-model="tangentFilter">
+                                                <option v-for="(item) in compressionMeshOptFilterMethods" v-bind:value="item.title">
+                                                    {{ item.title }}
+                                                </option>
+                                            </b-select>
+                                        </b-field>
+                                        <div v-if="tangentFilter === 'EXPONENTIAL'">
+                                            <b-field label="TANGENT Filter Mode" class="smallerLabel">
+                                                <b-select v-stream:input="tangentFilterModeChanged$"
+                                                    v-model="tangentFilterMode">
+                                                    <option v-for="(item) in compressionMeshOptFilterModes" v-bind:value="item.title">
+                                                        {{ item.title }}
+                                                    </option>
+                                                </b-select>
+                                            </b-field>
+                                        </div>
+                                        <div v-if="tangentFilter !== 'NONE'">
+                                            <b-field label="TANGENT Filter Bits" class="smallerLabel">
+                                                <b-slider rounded v-model="tangentFilterBits" :min="4" v-bind:max="32" :step=4
+                                                    class="iblIntensitySlider" v-stream:input="tangentFilterBitsChanged$">
+                                                    <b-slider-tick :value="4" class="iblIntensitySliderMarker">4</b-slider-tick>
+                                                    <b-slider-tick :value="32" class="iblIntensitySliderMarker">32</b-slider-tick>
+                                                </b-slider>
+                                            </b-field>
+                                        </div>
+                                        
+                                        <b-field label="TEXCOORD 0 Attribute Type" class="smallerLabel">
+                                            <b-select v-stream:input="compressionMOptQuantizationTexCoords0Changed$"
+                                                v-model="compressionMOptQuantizationTexCoords0">
+                                                <option v-for="(item) in compressionQuantizationTexCoordsTypes" v-bind:value="item.title">
+                                                    {{ item.title }}
+                                                </option>
+                                            </b-select>
+                                        </b-field>
+                                        <b-field label="TEXCOORD 0 Filter" class="smallerLabel">
+                                            <b-select v-stream:input="tex0FilterChanged$"
+                                                v-model="tex0Filter">
+                                                <option v-for="(item) in compressionMeshOptFilterMethods" v-bind:value="item.title">
+                                                    {{ item.title }}
+                                                </option>
+                                            </b-select>
+                                        </b-field>
+                                        <div v-if="tex0Filter === 'EXPONENTIAL'">
+                                            <b-field label="TEXCOORD 0 Filter Mode" class="smallerLabel">
+                                                <b-select v-stream:input="tex0FilterModeChanged$"
+                                                    v-model="tex0FilterMode">
+                                                    <option v-for="(item) in compressionMeshOptFilterModes" v-bind:value="item.title">
+                                                        {{ item.title }}
+                                                    </option>
+                                                </b-select>
+                                            </b-field>
+                                        </div>
+                                        <div v-if="tex0Filter !== 'NONE'">
+                                            <b-field label="TEXCOORD 0 Filter Bits" class="smallerLabel">
+                                                <b-slider rounded v-model="tex0FilterBits" :min="4" v-bind:max="32" :step=4
+                                                    class="iblIntensitySlider" v-stream:input="tex0FilterBitsChanged$">
+                                                    <b-slider-tick :value="4" class="iblIntensitySliderMarker">4</b-slider-tick>
+                                                    <b-slider-tick :value="32" class="iblIntensitySliderMarker">32</b-slider-tick>
+                                                </b-slider>
+                                            </b-field>
+                                        </div>
+
+
+                                        <b-field label="TEXCOORD 1 Attribute Type" class="smallerLabel">
+                                            <b-select v-stream:input="compressionMOptQuantizationTexCoords1Changed$"
+                                                v-model="compressionMOptQuantizationTexCoords1">
+                                                <option v-for="(item) in compressionQuantizationTexCoordsTypes" v-bind:value="item.title">
+                                                    {{ item.title }}
+                                                </option>
+                                            </b-select>
+                                        </b-field>
+                                        <b-field label="TEXCOORD 1 Filter" class="smallerLabel">
+                                            <b-select v-stream:input="tex1FilterChanged$"
+                                                v-model="tex1Filter">
+                                                <option v-for="(item) in compressionMeshOptFilterMethods" v-bind:value="item.title">
+                                                    {{ item.title }}
+                                                </option>
+                                            </b-select>
+                                        </b-field>
+                                        <div v-if="tex1Filter === 'EXPONENTIAL'">
+                                            <b-field label="TEXCOORD 1 Filter Mode" class="smallerLabel">
+                                                <b-select v-stream:input="tex1FilterModeChanged$"
+                                                    v-model="tex1FilterMode">
+                                                    <option v-for="(item) in compressionMeshOptFilterModes" v-bind:value="item.title">
+                                                        {{ item.title }}
+                                                    </option>
+                                                </b-select>
+                                            </b-field>
+                                        </div>
+                                        <div v-if="tex1Filter !== 'NONE'">
+                                            <b-field label="TEXCOORD 1 Filter Bits" class="smallerLabel">
+                                                <b-slider rounded v-model="tex1FilterBits" :min="4" v-bind:max="32" :step=4
+                                                    class="iblIntensitySlider" v-stream:input="tex1FilterBitsChanged$">
+                                                    <b-slider-tick :value="4" class="iblIntensitySliderMarker">4</b-slider-tick>
+                                                    <b-slider-tick :value="32" class="iblIntensitySliderMarker">32</b-slider-tick>
+                                                </b-slider>
+                                            </b-field>
+                                        </div>
+
+                                        <b-switch v-model="selectedCompressionMeshOptReorder" v-stream:input="compressionMeshOptReorderChanged$">Reorder 
+                                        </b-switch>
+                                        
+                                    </div>
+                                </div>  
+                            </div>
+
+                            <b-button @click="toggleTextureCompressorDisplay"class="divDropButton">
+                                <i class="fa fa-images"></i>
+                                &nbsp; Texture Compressor &nbsp;
+                                <i id="textureCompressorFA" class="fa fa-caret-right fa-sm"></i>
+                            </b-button>
+                            <div v-show="textureCompressorDisplay" class="collapseArea">
+                                <div v-if="texturesStatistics.length === 0">
+                                    <b-field label="NO TEXTURES FOUND" class="subtitle">
+                                    </b-field>
+                                </div>
+                                <div v-else>  
+                                    <texture-details v-bind:data="texturesStatistics" v-stream:buttonclicked="comparisonViewChanged$">
+                                    </texture-details>
+                                
+                                    <b-field label="Select by Type" class="smallerLabel">
+                                        <b-select v-stream:input="texturesSelectionChanged$"
+                                            v-model="selectedTextureType">
+                                            <option v-for="(item) in textureType" v-bind:value="item.title">
+                                                {{ item.title }}
+                                            </option>
+                                        </b-select>
+                                    </b-field>
+
+                                    <b-field label="COMPRESSION SETTINGS" class="subtitle">
+                                    </b-field>
+
+                                    <b-field label="Image Type" class="smallerLabel">
+                                        <b-select v-stream:input="compressionTextureSelectionChanged$"
+                                            v-model="selectedCompressionTextureType">
+                                            <option v-for="(item) in compressionTextureType" v-bind:value="item.title">
+                                                {{ item.title }}
+                                            </option>
+                                        </b-select>
+                                    </b-field>
+
+                                    <b-field label="Image Resolution Downscale" class="smallerLabel">
+                                        <b-select v-stream:input="compressionTextureResolutionSelectionChanged$"
+                                            v-model="selectedCompressionTextureResolution">
+                                            <option v-for="(item) in compressionTextureResolution" v-bind:value="item.title">
+                                                {{ item.title }}
+                                            </option>
+                                        </b-select>
+                                    </b-field>
+
+                                    <div v-if="selectedCompressionTextureType === 'KTX2'">
+                                        <b-field label="Image Encoding" class="smallerLabel">
+                                            <b-select v-stream:input="compressionTextureEncodingSelectionChanged$"
+                                                v-model="selectedCompressionTextureEncoding">
+                                                <option v-for="(item) in compressionTextureEncoding" v-bind:value="item.title">
+                                                    {{ item.title }}
+                                                </option>
+                                            </b-select>
+                                        </b-field>
+                                        <div v-if="selectedCompressionTextureEncoding === 'UASTC'">
+                                            <b-field label="UASTC SETTINGS" class="smallerLabel">
+                                                <b-field label="Level" class="smallerLabel">
+                                                    <b-select v-stream:input="compressedUASTC_FlagsChanged$" v-model="selectedCompressionUASTC_Flags">
+                                                        <option v-for="(item) in compressionUASTC_Flags" v-bind:value="item.title">
                                                             {{ item.title }}
                                                         </option>
                                                     </b-select>
                                                 </b-field>
+                                                <b-switch v-model="selectedCompressionUASTC_Rdo" v-stream:input="compressedUASTC_RdoChanged$">Supercompression 
+                                                </b-switch>
+                                                <div v-if="selectedCompressionUASTC_Rdo">
+                                                    
+                                                    <b-field label="Algorithm" class="smallerLabel">
+                                                        <b-select v-stream:input="compressionUASTC_Rdo_AlgorithmSelectionChanged$"
+                                                            v-model="selectedCompressionUASTC_Rdo_Algorithm">
+                                                            <option v-for="(item) in compressionUASTC_Rdo_Algorithms" v-bind:value="item.title">
+                                                                {{ item.title }}
+                                                            </option>
+                                                        </b-select>
+                                                    </b-field>
 
-                                                <b-field label="Level" class="smallerLabel">
-                                                    <b-slider rounded v-model="selectedCompressionUASTC_Rdo_Level" :min="1" v-bind:max="22" :step=1
-                                                        class="iblIntensitySlider" v-stream:input="compressionUASTC_Rdo_LevelChanged$">
+                                                    <b-field label="Level" class="smallerLabel">
+                                                        <b-slider rounded v-model="selectedCompressionUASTC_Rdo_Level" :min="1" v-bind:max="22" :step=1
+                                                            class="iblIntensitySlider" v-stream:input="compressionUASTC_Rdo_LevelChanged$">
+                                                            <b-slider-tick :value="1" class="iblIntensitySliderMarker">1</b-slider-tick> 
+                                                            <b-slider-tick :value="22" class="iblIntensitySliderMarker">22</b-slider-tick>                               
+                                                        </b-slider>
+                                                    </b-field>
+
+                                                    <b-field label="RDO Settings" class="smallerLabel">
+                                                    
+                                                        <b-field label="Quality Scalar" class="smallerLabel">
+                                                            <b-slider rounded v-model="selectedCompressionUASTC_Rdo_QualityScalar" :min="0.001" v-bind:max="50.0" :step=0.01
+                                                                class="iblIntensitySlider" v-stream:input="compressionUASTC_Rdo_QualityScalarChanged$">
+                                                                <b-slider-tick :value="0.001" class="iblIntensitySliderMarker">0.001</b-slider-tick> 
+                                                                <b-slider-tick :value="50.0" class="iblIntensitySliderMarker">50</b-slider-tick>                               
+                                                            </b-slider>
+                                                        </b-field>
+
+                                                        <b-field label="Dictionary Size" class="smallerLabel">
+                                                            <b-slider rounded v-model="selectedCompressionUASTC_Rdo_DictionarySize" :min="64" v-bind:max="65536" :step=1
+                                                                class="iblIntensitySlider" v-stream:input="compressionUASTC_Rdo_DictionarySizeChanged$">
+                                                                <b-slider-tick :value="64" class="iblIntensitySliderMarker">64</b-slider-tick> 
+                                                                <b-slider-tick :value="65536" class="iblIntensitySliderMarker">65536</b-slider-tick>                               
+                                                            </b-slider>
+                                                        </b-field>
+
+                                                        <b-field label="Max Smooth Block Error Scale" class="smallerLabel">
+                                                            <b-slider rounded v-model="selectedCompressionUASTC_Rdo_MaxSmoothBlockErrorScale" :min="1.0" v-bind:max="300.0" :step=0.1
+                                                                class="iblIntensitySlider" v-stream:input="compressionUASTC_Rdo_MaxSmoothBlockErrorScaleChanged$">
+                                                                <b-slider-tick :value="1.0" class="iblIntensitySliderMarker">1</b-slider-tick> 
+                                                                <b-slider-tick :value="300.0" class="iblIntensitySliderMarker">300</b-slider-tick>                               
+                                                            </b-slider>
+                                                        </b-field>
+
+                                                        <b-field label="Max Smooth Block Standard Deviation" class="smallerLabel">
+                                                            <b-slider rounded v-model="selectedCompressionUASTC_Rdo_MaxSmoothBlockStandardDeviation" :min="0.01" v-bind:max="65536.0" :step=0.01
+                                                                class="iblIntensitySlider" v-stream:input="compressionUASTC_Rdo_MaxSmoothBlockStandardDeviationChanged$">
+                                                                <b-slider-tick :value="0.01" class="iblIntensitySliderMarker">0.01</b-slider-tick> 
+                                                                <b-slider-tick :value="65536.0" class="iblIntensitySliderMarker">65536</b-slider-tick>                               
+                                                            </b-slider>
+                                                        </b-field>
+
+                                                        <b-switch v-model="selectedCompressionUASTC_Rdo_DonotFavorSimplerModes" v-stream:input="compressedUASTC_Rdo_DonotFavorSimplerModesChanged$">Do not favor simpler modes
+                                                        </b-switch>
+
+                                                    </b-field>
+                                                </div>    
+                                            </b-field>
+                                        </div>
+                                        <div v-else>
+                                            <b-field label="ETC1S SETTINGS" class="smallerLabel">
+                                                <b-field label="Compression Level" class="smallerLabel">
+                                                    <b-slider rounded v-model="selectedCompressionETC1S_CompressionLevel" :min="1" v-bind:max="5" :step=1
+                                                        class="iblIntensitySlider" v-stream:input="compressionETC1S_CompressionLevelChanged$">
                                                         <b-slider-tick :value="1" class="iblIntensitySliderMarker">1</b-slider-tick> 
-                                                        <b-slider-tick :value="22" class="iblIntensitySliderMarker">22</b-slider-tick>                               
+                                                        <b-slider-tick :value="5" class="iblIntensitySliderMarker">5</b-slider-tick>                               
                                                     </b-slider>
-                                                </b-field>
 
-                                                <b-field label="RDO Settings" class="smallerLabel">
-                                                
-                                                    <b-field label="Quality Scalar" class="smallerLabel">
-                                                        <b-slider rounded v-model="selectedCompressionUASTC_Rdo_QualityScalar" :min="0.001" v-bind:max="50.0" :step=0.01
-                                                            class="iblIntensitySlider" v-stream:input="compressionUASTC_Rdo_QualityScalarChanged$">
-                                                            <b-slider-tick :value="0.001" class="iblIntensitySliderMarker">0.001</b-slider-tick> 
-                                                            <b-slider-tick :value="50.0" class="iblIntensitySliderMarker">50</b-slider-tick>                               
+                                                    <b-field label="Quality Level" class="smallerLabel">
+                                                        <b-slider rounded v-model="selectedCompressionETC1S_QualityLevel" :min="1" v-bind:max="255" :step=1
+                                                            class="iblIntensitySlider" v-stream:input="compressionETC1S_QualityLevelChanged$">
+                                                            <b-slider-tick :value="1" class="iblIntensitySliderMarker">1</b-slider-tick> 
+                                                            <b-slider-tick :value="255" class="iblIntensitySliderMarker">255</b-slider-tick>                               
                                                         </b-slider>
                                                     </b-field>
 
-                                                    <b-field label="Dictionary Size" class="smallerLabel">
-                                                        <b-slider rounded v-model="selectedCompressionUASTC_Rdo_DictionarySize" :min="64" v-bind:max="65536" :step=1
-                                                            class="iblIntensitySlider" v-stream:input="compressionUASTC_Rdo_DictionarySizeChanged$">
-                                                            <b-slider-tick :value="64" class="iblIntensitySliderMarker">64</b-slider-tick> 
-                                                            <b-slider-tick :value="65536" class="iblIntensitySliderMarker">65536</b-slider-tick>                               
+                                                    <b-field label="Max End Points" class="smallerLabel">
+                                                        <b-slider rounded v-model="selectedCompressionETC1S_MaxEndPoints" :min="0" v-bind:max="16128" :step=1
+                                                            class="iblIntensitySlider" v-stream:input="compressionETC1S_MaxEndPointsChanged$">
+                                                            <b-slider-tick :value="0" class="iblIntensitySliderMarker">0</b-slider-tick> 
+                                                            <b-slider-tick :value="16128" class="iblIntensitySliderMarker">16128</b-slider-tick>                               
                                                         </b-slider>
                                                     </b-field>
 
-                                                    <b-field label="Max Smooth Block Error Scale" class="smallerLabel">
-                                                        <b-slider rounded v-model="selectedCompressionUASTC_Rdo_MaxSmoothBlockErrorScale" :min="1.0" v-bind:max="300.0" :step=0.1
-                                                            class="iblIntensitySlider" v-stream:input="compressionUASTC_Rdo_MaxSmoothBlockErrorScaleChanged$">
-                                                            <b-slider-tick :value="1.0" class="iblIntensitySliderMarker">1</b-slider-tick> 
-                                                            <b-slider-tick :value="300.0" class="iblIntensitySliderMarker">300</b-slider-tick>                               
+                                                    <b-field label="Endpoint RDO Threshold" class="smallerLabel">
+                                                        <b-slider rounded v-model="selectedCompressionETC1S_EndpointRdoThreshold" :min="1.0" v-bind:max="3.0" :step=0.1
+                                                            class="iblIntensitySlider" v-stream:input="compressionETC1S_EndpointRdoThresholdChanged$">
+                                                            <b-slider-tick :value="1.0" class="iblIntensitySliderMarker">1.0</b-slider-tick> 
+                                                            <b-slider-tick :value="3.0" class="iblIntensitySliderMarker">3.0</b-slider-tick>                               
                                                         </b-slider>
                                                     </b-field>
 
-                                                    <b-field label="Max Smooth Block Standard Deviation" class="smallerLabel">
-                                                        <b-slider rounded v-model="selectedCompressionUASTC_Rdo_MaxSmoothBlockStandardDeviation" :min="0.01" v-bind:max="65536.0" :step=0.01
-                                                            class="iblIntensitySlider" v-stream:input="compressionUASTC_Rdo_MaxSmoothBlockStandardDeviationChanged$">
-                                                            <b-slider-tick :value="0.01" class="iblIntensitySliderMarker">0.01</b-slider-tick> 
-                                                            <b-slider-tick :value="65536.0" class="iblIntensitySliderMarker">65536</b-slider-tick>                               
+                                                    <b-field label="Max Selectors" class="smallerLabel">
+                                                        <b-slider rounded v-model="selectedCompressionETC1S_MaxSelectors" :min="0" v-bind:max="16128" :step=1
+                                                            class="iblIntensitySlider" v-stream:input="compressionETC1S_MaxSelectorsChanged$">
+                                                            <b-slider-tick :value="0" class="iblIntensitySliderMarker">0</b-slider-tick> 
+                                                            <b-slider-tick :value="16128" class="iblIntensitySliderMarker">16128</b-slider-tick>                               
                                                         </b-slider>
                                                     </b-field>
 
-                                                    <b-switch v-model="selectedCompressionUASTC_Rdo_DonotFavorSimplerModes" v-stream:input="compressedUASTC_Rdo_DonotFavorSimplerModesChanged$">Do not favor simpler modes
+                                                    <b-field label="Selector RDO Threshold" class="smallerLabel">
+                                                        <b-slider rounded v-model="selectedCompressionETC1S_SelectorRdoThreshold" :min="1.0" v-bind:max="3.0" :step=0.1
+                                                            class="iblIntensitySlider" v-stream:input="compressionETC1S_SelectorRdoThresholdChanged$">
+                                                            <b-slider-tick :value="1.0" class="iblIntensitySliderMarker">1.0</b-slider-tick> 
+                                                            <b-slider-tick :value="3.0" class="iblIntensitySliderMarker">3.0</b-slider-tick>                               
+                                                        </b-slider>
+                                                    </b-field>
+
+                                                    <b-switch v-model="selectedCompressionETC1S_NoEndpointRdo" v-stream:input="compressionETC1S_NoEndpointRdoChanged$">No Endpoint RDO 
                                                     </b-switch>
 
+                                                    <b-switch v-model="selectedCompressionETC1S_NoSelectorRdo" v-stream:input="compressionETC1S_NoSelectorRdoChanged$">No Selector RDO 
+                                                    </b-switch>
                                                 </b-field>
-                                            </div>    
-                                        </b-field>
-                                    </div>
-                                    <div v-else>
-                                        <b-field label="ETC1S SETTINGS" class="smallerLabel">
-                                            <b-field label="Compression Level" class="smallerLabel">
-                                                <b-slider rounded v-model="selectedCompressionETC1S_CompressionLevel" :min="1" v-bind:max="5" :step=1
-                                                    class="iblIntensitySlider" v-stream:input="compressionETC1S_CompressionLevelChanged$">
-                                                    <b-slider-tick :value="1" class="iblIntensitySliderMarker">1</b-slider-tick> 
-                                                    <b-slider-tick :value="5" class="iblIntensitySliderMarker">5</b-slider-tick>                               
-                                                </b-slider>
-
-                                                <b-field label="Quality Level" class="smallerLabel">
-                                                    <b-slider rounded v-model="selectedCompressionETC1S_QualityLevel" :min="1" v-bind:max="255" :step=1
-                                                        class="iblIntensitySlider" v-stream:input="compressionETC1S_QualityLevelChanged$">
-                                                        <b-slider-tick :value="1" class="iblIntensitySliderMarker">1</b-slider-tick> 
-                                                        <b-slider-tick :value="255" class="iblIntensitySliderMarker">255</b-slider-tick>                               
-                                                    </b-slider>
-                                                </b-field>
-
-                                                <b-field label="Max End Points" class="smallerLabel">
-                                                    <b-slider rounded v-model="selectedCompressionETC1S_MaxEndPoints" :min="0" v-bind:max="16128" :step=1
-                                                        class="iblIntensitySlider" v-stream:input="compressionETC1S_MaxEndPointsChanged$">
-                                                        <b-slider-tick :value="0" class="iblIntensitySliderMarker">0</b-slider-tick> 
-                                                        <b-slider-tick :value="16128" class="iblIntensitySliderMarker">16128</b-slider-tick>                               
-                                                    </b-slider>
-                                                </b-field>
-
-                                                <b-field label="Endpoint RDO Threshold" class="smallerLabel">
-                                                    <b-slider rounded v-model="selectedCompressionETC1S_EndpointRdoThreshold" :min="1.0" v-bind:max="3.0" :step=0.1
-                                                        class="iblIntensitySlider" v-stream:input="compressionETC1S_EndpointRdoThresholdChanged$">
-                                                        <b-slider-tick :value="1.0" class="iblIntensitySliderMarker">1.0</b-slider-tick> 
-                                                        <b-slider-tick :value="3.0" class="iblIntensitySliderMarker">3.0</b-slider-tick>                               
-                                                    </b-slider>
-                                                </b-field>
-
-                                                <b-field label="Max Selectors" class="smallerLabel">
-                                                    <b-slider rounded v-model="selectedCompressionETC1S_MaxSelectors" :min="0" v-bind:max="16128" :step=1
-                                                        class="iblIntensitySlider" v-stream:input="compressionETC1S_MaxSelectorsChanged$">
-                                                        <b-slider-tick :value="0" class="iblIntensitySliderMarker">0</b-slider-tick> 
-                                                        <b-slider-tick :value="16128" class="iblIntensitySliderMarker">16128</b-slider-tick>                               
-                                                    </b-slider>
-                                                </b-field>
-
-                                                <b-field label="Selector RDO Threshold" class="smallerLabel">
-                                                    <b-slider rounded v-model="selectedCompressionETC1S_SelectorRdoThreshold" :min="1.0" v-bind:max="3.0" :step=0.1
-                                                        class="iblIntensitySlider" v-stream:input="compressionETC1S_SelectorRdoThresholdChanged$">
-                                                        <b-slider-tick :value="1.0" class="iblIntensitySliderMarker">1.0</b-slider-tick> 
-                                                        <b-slider-tick :value="3.0" class="iblIntensitySliderMarker">3.0</b-slider-tick>                               
-                                                    </b-slider>
-                                                </b-field>
-
-                                                <b-switch v-model="selectedCompressionETC1S_NoEndpointRdo" v-stream:input="compressionETC1S_NoEndpointRdoChanged$">No Endpoint RDO 
-                                                </b-switch>
-
-                                                <b-switch v-model="selectedCompressionETC1S_NoSelectorRdo" v-stream:input="compressionETC1S_NoSelectorRdoChanged$">No Selector RDO 
-                                                </b-switch>
                                             </b-field>
+                                        </div>
+
+                                    </div>
+                                    <div v-else-if="selectedCompressionTextureType === 'JPEG'">
+                                        <b-field label="Image Quality" class="smallerLabel">
+                                            <b-slider rounded v-model="compressionQualityJPEG" :min="0" v-bind:max="100" :step=1
+                                                class="iblIntensitySlider" v-stream:input="compressionQualityJPEGChanged$">
+                                                <b-slider-tick :value="0" class="iblIntensitySliderMarker">0</b-slider-tick>
+                                                <b-slider-tick :value="100" class="iblIntensitySliderMarker">100</b-slider-tick>
+                                            </b-slider>
                                         </b-field>
                                     </div>
-
-                                </div>
-                                <div v-else-if="selectedCompressionType === 'JPEG'">
-                                    <b-field label="Image Quality" class="smallerLabel">
-                                        <b-slider rounded v-model="compressionQualityJPEG" :min="0" v-bind:max="100" :step=1
-                                            class="iblIntensitySlider" v-stream:input="compressionQualityJPEGChanged$">
-                                            <b-slider-tick :value="0" class="iblIntensitySliderMarker">0</b-slider-tick>
-                                            <b-slider-tick :value="100" class="iblIntensitySliderMarker">100</b-slider-tick>
-                                        </b-slider>
-                                    </b-field>
-                                </div>
-                                <div v-else-if="selectedCompressionType === 'PNG'">
-                                    <b-field label="Compression Level" class="smallerLabel">
-                                        <b-slider rounded v-model="compressionQualityPNG" :min="1" v-bind:max="10" :step=1
-                                            class="iblIntensitySlider" v-stream:input="compressionQualityPNGChanged$">
-                                            <b-slider-tick :value="1" class="iblIntensitySliderMarker">1</b-slider-tick>
-                                            <b-slider-tick :value="10" class="iblIntensitySliderMarker">10</b-slider-tick>
-                                        </b-slider>
-                                    </b-field>
-                                </div>
-                                <div v-else-if="selectedCompressionType === 'WEBP'">
-                                    <b-field label="Image Quality" class="smallerLabel">
-                                        <b-slider rounded v-model="compressionQualityWEBP" :min="0" v-bind:max="100" :step=1
-                                            class="iblIntensitySlider" v-stream:input="compressionQualityWEBPChanged$">
-                                            <b-slider-tick :value="0" class="iblIntensitySliderMarker">0</b-slider-tick>
-                                            <b-slider-tick :value="100" class="iblIntensitySliderMarker">100</b-slider-tick>
-                                        </b-slider>
-                                    </b-field>
-                                </div>
-                                
-                                </br>
-                                <button v-stream:click="compressTextures$" :disabled="compressionStarted && !compressionCompleted" type="button" class="button is-rounded" style="width: -webkit-fill-available;">
-                                    <i class="fa fa-cogs downloadIcon"></i> {{ compressionBtnTitle }}
-                                </button> 
-
-                                <div v-if="compressionStarted && !compressionCompleted">
-                                    <b-progress type="is-primary" :value="progressValue" :key="progressValue" :max="100" style="padding-top: 5px;">
-                                    </b-progress>
-                                </div>
-
-                                <div id="targetElement" v-show="compressionCompleted">
-                                    <b-field label="COMPARISON" class="subtitle">
-                                        <b-switch v-model="comparisonSlider">Comparison Slider Preview
-                                        </b-switch>
-
-                                        <b-switch v-model="compressionOnly">Show Compressed 3D Model 
-                                        </b-switch>
-                                    </b-field>
-                                
-                                    <b-field label="Total textures size" class="smallerLabel">
-                                        <json-to-ui-template v-bind:data="compressionStatistics" v-bind:isinner="false">
-                                        </json-to-ui-template>
-                                    </b-field>
-
-                                    <button v-stream:click="gltfExport$" type="button" class="button is-rounded">
-                                        <i class="fa fa-download downloadIcon"></i>Export as .gltf
-                                    </button>
-                                    <br>
-                                    <br>
-                                    <div v-if="compressedKTX">
-                                        <button v-stream:click="ktxjsonExport$" type="button" class="button is-rounded">
-                                            <i class="fa fa-download downloadIcon"></i>Export ktx .json file
-                                        </button>
+                                    <div v-else-if="selectedCompressionTextureType === 'PNG'">
+                                        <b-field label="Compression Level" class="smallerLabel">
+                                            <b-slider rounded v-model="compressionQualityPNG" :min="1" v-bind:max="10" :step=1
+                                                class="iblIntensitySlider" v-stream:input="compressionQualityPNGChanged$">
+                                                <b-slider-tick :value="1" class="iblIntensitySliderMarker">1</b-slider-tick>
+                                                <b-slider-tick :value="10" class="iblIntensitySliderMarker">10</b-slider-tick>
+                                            </b-slider>
+                                        </b-field>
+                                    </div>
+                                    <div v-else-if="selectedCompressionTextureType === 'WEBP'">
+                                        <b-field label="Image Quality" class="smallerLabel">
+                                            <b-slider rounded v-model="compressionQualityWEBP" :min="0" v-bind:max="100" :step=1
+                                                class="iblIntensitySlider" v-stream:input="compressionQualityWEBPChanged$">
+                                                <b-slider-tick :value="0" class="iblIntensitySliderMarker">0</b-slider-tick>
+                                                <b-slider-tick :value="100" class="iblIntensitySliderMarker">100</b-slider-tick>
+                                            </b-slider>
+                                        </b-field>
                                     </div>
                                 </div>
+                            </div>
+                            
+                            <div v-if="geometryStatistics.length > 0 || texturesStatistics.length > 0"> 
+                            <button v-stream:click="compressGeometry$" :disabled="compressionStarted && !compressionCompleted" type="button" class="button is-rounded" style="width: -webkit-fill-available; margin-top: 10px;" @click="disableMeshHighlighting()">
+                                <i class="fa fa-cogs downloadIcon"></i> {{ compressionBtnTitle }}
+                            </button> 
+
+                            <div v-if="compressionStarted && !compressionCompleted">
+                                <b-progress type="is-primary" :value="progressValue" :key="progressValue" :max="100" style="padding-top: 5px;">
+                                </b-progress>
+                            </div>
+
+                            <div id="targetElement" v-show="compressionCompleted">
+                                <b-field label="COMPARISON" class="subtitle">
+                                    <b-switch v-model="comparisonSlider">Comparison Slider Preview
+                                    </b-switch>
+
+                                    <b-switch v-model="compressionOnly">Show Compressed 3D Model 
+                                    </b-switch>
+                                </b-field>
+                            
+                                <b-field label="Total (geometry + texture) size" class="smallerLabel">
+                                    <json-to-ui-template v-bind:data="compressionStatistics" v-bind:isinner="false">
+                                    </json-to-ui-template>
+                                </b-field>
+
+                                <button v-stream:click="gltfExport$" type="button" class="button is-rounded">
+                                    <i class="fa fa-download downloadIcon"></i>Export as .gltf
+                                </button>
+                                <br>
+                                <br>
+                                <div v-if="compressedKTX">
+                                    <button v-stream:click="ktxjsonExport$" type="button" class="button is-rounded">
+                                        <i class="fa fa-download downloadIcon"></i>Export ktx .json file
+                                    </button>
+                                </div>
+                            </div>
                             </div>
                         </div>
                     </b-tab-item>
@@ -729,6 +1158,7 @@
                                 <b-switch class="smallerLabel" v-model="specularEnabled">KHR_materials_specular</b-switch>
                                 <b-switch class="smallerLabel" v-model="emissiveStrengthEnabled">KHR_materials_emissive_strength</b-switch>
                                 <b-switch class="smallerLabel" v-model="iridescenceEnabled">KHR_materials_iridescence</b-switch>
+                                <b-switch class="smallerLabel" v-model="anisotropyEnabled">KHR_materials_anisotropy</b-switch>
                             </b-field>
                             <b-field label="Statistics" class="subtitle">
                                 <json-to-ui-template v-bind:data="statistics" v-bind:isinner="false">

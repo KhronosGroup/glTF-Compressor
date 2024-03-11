@@ -55,6 +55,8 @@ class GltfState
                 KHR_materials_specular: true,
                 /** KHR_materials_iridescence adds a thin-film iridescence effect */
                 KHR_materials_iridescence: true,
+                /** KHR_materials_anisotropy defines microfacet grooves in the surface, stretching the specular reflection on the surface */
+                KHR_materials_anisotropy: true,
                 KHR_materials_emissive_strength: true,
             },
             /** clear color expressed as list of ints in the range [0, 255] */
@@ -116,7 +118,7 @@ class GltfState
             compressionQualityWEBP: 80.0,
 
             /** Set the compression encoding KTX2 */
-            compressionEncoding: "UASTC",
+            compressionTextureEncoding: "UASTC",
 
             /** Set the compression quality KTX2 - UASTC */
             compressionUASTC_Flags: "DEFAULT",
@@ -139,14 +141,51 @@ class GltfState
             compressionETC1S_NoEndpointRdo: false,
             compressionETC1S_NoSelectorRdo: false,
 
-            /** Set the compression type */
-            compressionType: "KTX2",
+            /** Set the compression quality Mesh Quantization */
+            compressionQuantizationPositionType: "NONE",
+            compressionQuantizationNormalType: "NONE",
+            compressionQuantizationTangentType: "NONE",
+            compressionQuantizationTexCoords0Type: "NONE",
+            compressionQuantizationTexCoords1Type: "NONE",
+
+            /** Set the compression quality Mesh Draco */
+            compressionDracoEncodingMethod: "EDGEBREAKER",
+            compressionLevelDraco: 7,
+            compressionDracoQuantizationPositionQuantBits: 16,
+            compressionDracoQuantizationNormalQuantBits: 10,
+            compressionDracoQuantizationColorQuantBits: 16,
+            compressionDracoQuantizationTexcoordQuantBits: 11,
+            compressionDracoQuantizationGenericQuantBits: 32,
+
+            /** Set the compression quality Mesh Optimizer */
+            compressionMeshOptFilterMethod: "NONE",
+            compressionMeshOptFilterMode: "Seperate",
+            compressionMeshOptReorder: false,
+            compressionMeshOptQuantizationPositionQuantBits: 16,
+            compressionMeshOptQuantizationNormalQuantBits: 8,
+            compressionMeshOptQuantizationColorQuantBits: 16,
+            compressionMeshOptQuantizationTexcoordQuantBits: 12,
+
+            /** Set the texture compression type */
+            compressionTextureType: "KTX2",
+
+            /** Set the geometry compression type */
+            compressionGeometryType: "Draco",
 
             /** Set the selected images */
             selectedImages: [],
 
             /** Set the active processed images */
-            processedImages: []
+            processedImages: [],
+
+            /** Set the selected mesh nodes */
+            selectedMeshes: [],
+
+            /** Set the active processed meshes */
+            processedMeshes: [],
+
+            /** Set Mesh Highlighting */
+            meshHighlighing: true,
         };
 
         // retain a reference to the view with which the state was created, so that it can be validated
@@ -255,7 +294,7 @@ GltfState.DebugOutput = {
         VOLUME_THICKNESS: "Volume Thickness",
     },
 
-    /** output tranmission lighting */
+    /** output iridescence */
     iridescence: {
         /** output the combined iridescence */
         IRIDESCENCE: "Iridescence",
@@ -263,6 +302,14 @@ GltfState.DebugOutput = {
         IRIDESCENCE_FACTOR: "Iridescence Factor",
         /** output the iridescence thickness*/
         IRIDESCENCE_THICKNESS: "Iridescence Thickness",
+    },
+
+    /** output anisotropy */
+    anisotropy: {
+        /** output the anisotropic strength*/
+        ANISOTROPIC_STRENGTH: "Anisotropic Strength",
+        /** output final direction as defined by the anisotropyTexture and rotation*/
+        ANISOTROPIC_DIRECTION: "Anisotropic Direction",
     },
 };
 

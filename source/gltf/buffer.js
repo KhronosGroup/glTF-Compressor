@@ -29,7 +29,10 @@ class gltfBuffer extends GltfObject
             if (!self.setBufferFromFiles(additionalFiles, resolve) &&
                 !self.setBufferFromUri(gltf, resolve))
             {
-                console.error("Was not able to resolve buffer with uri '%s'", self.uri);
+                /* Handle fallback buffer case for EXT_meshopt_compression */
+                if (self.extensions === undefined &&
+                    self.extensions.EXT_meshopt_compression === undefined)
+                    console.error("Was not able to resolve buffer with uri '%s'", self.uri);
                 resolve();
             }
         });
@@ -59,13 +62,12 @@ class gltfBuffer extends GltfObject
             return false;
         }
 
-        const foundFile = files.find(function(file)
-        {
+        const foundFile = files.find(([path, file]) => {
             if (file.name === this.uri || file.fullPath === this.uri)
             {
                 return true;
             }
-        }, this);
+        });
 
         if (foundFile === undefined)
         {
@@ -79,7 +81,7 @@ class gltfBuffer extends GltfObject
             self.buffer = event.target.result;
             callback();
         };
-        reader.readAsArrayBuffer(foundFile);
+        reader.readAsArrayBuffer(foundFile[1]);
 
         return true;
     }

@@ -90,6 +90,26 @@ class gltfTextureInfo
     {
         fromKeys(this, jsonTextureInfo);
     }
+
+    static createCopy(original)
+    {
+        if(original === undefined)
+            return undefined;
+        if(original === null)
+            return null;
+        const text = new gltfTextureInfo();
+        text.index = original.index; // reference to gltfTexture
+        text.texCoord = original.texCoord; // which UV set to use
+        text.linear = original.linear;
+        text.samplerName = original.samplerName;
+        text.strength = original.strength;
+        text.scale = original.scale;
+        text.generateMips = original.generateMips;
+
+        text.extensions = original.extensions;
+
+        return text;
+    }
 }
 
 export { gltfTexture, gltfTextureInfo };

@@ -194,19 +194,20 @@ class gltfRenderer
     clearFrame(clearColor)
     {
         this.webGl.context.bindFramebuffer(this.webGl.context.FRAMEBUFFER, null);
-        this.webGl.context.clearColor(clearColor[0] / 255.0, clearColor[1] / 255.0, clearColor[2] / 255.0, clearColor[3] / 255.0);
+        this.webGl.context.clearColor(...clearColor);
         this.webGl.context.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
         this.webGl.context.bindFramebuffer(this.webGl.context.FRAMEBUFFER, this.opaqueFramebuffer);
-        this.webGl.context.clearColor(clearColor[0] / 255.0, clearColor[1] / 255.0, clearColor[2] / 255.0, clearColor[3] / 255.0);
+        this.webGl.context.clearColor(...clearColor);
         this.webGl.context.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
         this.webGl.context.bindFramebuffer(this.webGl.context.FRAMEBUFFER, null);
         this.webGl.context.bindFramebuffer(this.webGl.context.FRAMEBUFFER, this.opaqueFramebufferMSAA);
-        this.webGl.context.clearColor(clearColor[0] / 255.0, clearColor[1] / 255.0, clearColor[2] / 255.0, clearColor[3] / 255.0);
+        this.webGl.context.clearColor(...clearColor);
         this.webGl.context.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
         this.webGl.context.bindFramebuffer(this.webGl.context.FRAMEBUFFER, null);
     }
 
     prepareScene(state, scene) {
+        //debugger;
         this.nodes = scene.gatherNodes(state.gltf);
 
         // collect drawables by essentially zipping primitives (for geometry and material)
@@ -231,6 +232,43 @@ class gltfRenderer
                     || state.gltf.materials[primitive.material].extensions.KHR_materials_transmission === undefined));
 
         this.transmissionDrawables = drawables
+            .filter(({primitive}) => state.gltf.materials[primitive.material].extensions !== undefined
+                && state.gltf.materials[primitive.material].extensions.KHR_materials_transmission !== undefined);
+
+        /// GLTF-Compressor
+
+        // save the original
+        this.opaqueDrawablesOriginal = this.opaqueDrawables;
+        this.transparentDrawablesOriginal = this.transparentDrawables;
+        this.transmissionDrawablesOriginal = this.transmissionDrawables;
+
+        // Compute the compressed drawables
+        const compressed_drawables = this.nodes
+            .filter(node => node.compressedMesh !== undefined)
+            .reduce((acc, node) => acc.concat(node.compressedMesh.primitives.map( primitive => {
+                return  {node: node, primitive: primitive};
+            })), [])
+            .filter(({primitive}) => primitive.material !== undefined)
+        .concat(this.nodes
+            .filter(node => node.compressedNode === undefined && node.mesh !== undefined)
+            .reduce((acc, node) => acc.concat(state.gltf.meshes[node.mesh].primitives.map( primitive => {
+                return  {node: node, primitive: primitive};
+            })), [])
+            .filter(({primitive}) => primitive.material !== undefined));
+
+        // opaque drawables don't need sorting
+        this.opaqueDrawablesCompressed = compressed_drawables
+            .filter(({primitive}) => state.gltf.materials[primitive.material].alphaMode !== "BLEND"
+                && (state.gltf.materials[primitive.material].extensions === undefined
+                    || state.gltf.materials[primitive.material].extensions.KHR_materials_transmission === undefined));
+
+        // transparent drawables need sorting before they can be drawn
+        this.transparentDrawablesCompressed = compressed_drawables
+            .filter(({primitive}) => state.gltf.materials[primitive.material].alphaMode === "BLEND"
+                && (state.gltf.materials[primitive.material].extensions === undefined
+                    || state.gltf.materials[primitive.material].extensions.KHR_materials_transmission === undefined));
+
+        this.transmissionDrawablesCompressed = compressed_drawables
             .filter(({primitive}) => state.gltf.materials[primitive.material].extensions !== undefined
                 && state.gltf.materials[primitive.material].extensions.KHR_materials_transmission !== undefined);
     }
@@ -284,11 +322,19 @@ class gltfRenderer
             }
         }
 
+        this.opaqueDrawables = state.compressorParameters.previewCompressed? this.opaqueDrawablesCompressed : this.opaqueDrawablesOriginal;
+        this.transparentDrawables = state.compressorParameters.previewCompressed? this.transparentDrawablesCompressed : this.transparentDrawablesOriginal;
+        this.transmissionDrawables = state.compressorParameters.previewCompressed? this.transmissionDrawablesCompressed : this.transmissionDrawablesOriginal;
+
         // If any transmissive drawables are present, render all opaque and transparent drawables into a separate framebuffer.
         if (this.transmissionDrawables.length > 0) {
             // Render transmission sample texture
             this.webGl.context.bindFramebuffer(this.webGl.context.FRAMEBUFFER, this.opaqueFramebufferMSAA);
             this.webGl.context.viewport(0, 0, this.opaqueFramebufferWidth, this.opaqueFramebufferHeight);
+
+            const clearColor = state.renderingParameters.clearColor;
+            this.webGl.context.clearColor(clearColor[0] / 255.0, clearColor[1] / 255.0, clearColor[2] / 255.0, clearColor[3] / 255.0);
+            this.webGl.context.clear(GL.COLOR_BUFFER_BIT | GL.DEPTH_BUFFER_BIT);
 
             // Render environment for the transmission background
             this.environmentRenderer.drawEnvironmentMap(this.webGl, this.viewProjectionMatrix, state, this.shaderCache, ["LINEAR_OUTPUT 1"]);
@@ -426,6 +472,8 @@ class gltfRenderer
         this.shader.updateUniform("u_NormalMatrix", node.normalMatrix, false);
         this.shader.updateUniform("u_Exposure", state.renderingParameters.exposure, false);
         this.shader.updateUniform("u_Camera", this.currentCameraPosition, false);
+        const highlightIntensity = primitive.isHighlighted && state.compressorParameters.meshHighlighing ? 0.5 : 0.0;
+        this.shader.updateUniform("u_HighlightColor", new Float32Array([highlightIntensity, highlightIntensity, 0]));
 
         this.updateAnimationUniforms(state, node, primitive);
 
@@ -474,7 +522,7 @@ class gltfRenderer
             vertexCount = gltfAccessor.count;
 
             const location = this.shader.getAttributeLocation(attribute.name);
-            if (location < 0)
+            if (location === null)
             {
                 continue; // only skip this attribute
             }
@@ -484,6 +532,7 @@ class gltfRenderer
             }
         }
 
+        // update uniforms
         for (let [uniform, val] of material.getProperties().entries())
         {
             this.shader.updateUniform(uniform, val, false);
@@ -494,8 +543,7 @@ class gltfRenderer
         {
             let info = material.textures[textureIndex];
             const location = this.shader.getUniformLocation(info.samplerName);
-
-            if (location < 0)
+            if (!this.webGl.setTexture(location, state.gltf, info, textureIndex))
             {
                 console.log("Unable to find uniform location of "+info.samplerName);
                 continue; // only skip this texture
@@ -510,11 +558,6 @@ class gltfRenderer
         if (primitive.morphTargetTextureInfo !== undefined) 
         {
             const location = this.shader.getUniformLocation(primitive.morphTargetTextureInfo.samplerName);
-            if (location < 0)
-            {
-                console.log("Unable to find uniform location of " + primitive.morphTargetTextureInfo.samplerName);
-            }
-
             this.webGl.setTexture(location, state.gltf, primitive.morphTargetTextureInfo, textureIndex); // binds texture and sampler
             textureIndex++;
         }
@@ -524,11 +567,6 @@ class gltfRenderer
         {
             const skin = state.gltf.skins[node.skin];
             const location = this.shader.getUniformLocation(skin.jointTextureInfo.samplerName);
-            if (location < 0)
-            {
-                console.log("Unable to find uniform location of " + skin.jointTextureInfo.samplerName);
-            }
-
             this.webGl.setTexture(location, state.gltf, skin.jointTextureInfo, textureIndex); // binds texture and sampler
             textureIndex++;
         }
@@ -572,7 +610,7 @@ class gltfRenderer
         for (const attribute of primitive.glAttributes)
         {
             const location = this.shader.getAttributeLocation(attribute.name);
-            if (location < 0)
+            if (location === null)
             {
                 continue; // skip this attribute
             }
@@ -646,11 +684,11 @@ class gltfRenderer
         {
             vertDefines.push("USE_SKINNING 1");
         }
-
         // morphing
-        if (parameters.morphing && node.mesh !== undefined && primitive.targets.length > 0)
+        const mesh_id = node.mesh !== undefined ? node.mesh : ( (node.compressedMesh !== undefined && node.compressedMesh.mesh !== undefined) ? node.compressedMesh.mesh : undefined );
+        if (parameters.morphing && mesh_id !== undefined && primitive.targets.length > 0)
         {
-            const mesh = gltf.meshes[node.mesh];
+            const mesh = gltf.meshes[mesh_id];
             if (mesh.getWeightsAnimated() !== undefined && mesh.getWeightsAnimated().length > 0)
             {
                 vertDefines.push("USE_MORPHING 1");
@@ -661,9 +699,11 @@ class gltfRenderer
 
     updateAnimationUniforms(state, node, primitive)
     {
-        if (state.renderingParameters.morphing && node.mesh !== undefined && primitive.targets.length > 0)
+
+        const mesh_id = node.mesh !== undefined ? node.mesh : ( (node.compressedMesh !== undefined && node.compressedMesh.mesh !== undefined) ? node.compressedMesh.mesh : undefined );
+        if (state.renderingParameters.morphing && mesh_id !== undefined && primitive.targets.length > 0)
         {
-            const mesh = state.gltf.meshes[node.mesh];
+            const mesh = state.gltf.meshes[mesh_id];
             const weightsAnimated = mesh.getWeightsAnimated();
             if (weightsAnimated !== undefined && weightsAnimated.length > 0)
             {
@@ -740,6 +780,9 @@ class gltfRenderer
             {debugOutput: GltfState.DebugOutput.iridescence.IRIDESCENCE, shaderDefine: "DEBUG_IRIDESCENCE"},
             {debugOutput: GltfState.DebugOutput.iridescence.IRIDESCENCE_FACTOR, shaderDefine: "DEBUG_IRIDESCENCE_FACTOR"},
             {debugOutput: GltfState.DebugOutput.iridescence.IRIDESCENCE_THICKNESS, shaderDefine: "DEBUG_IRIDESCENCE_THICKNESS"},
+
+            {debugOutput: GltfState.DebugOutput.anisotropy.ANISOTROPIC_STRENGTH, shaderDefine: "DEBUG_ANISOTROPIC_STRENGTH"},
+            {debugOutput: GltfState.DebugOutput.anisotropy.ANISOTROPIC_DIRECTION, shaderDefine: "DEBUG_ANISOTROPIC_DIRECTION"},
         ];
 
         let mappingCount = 0;

@@ -2,6 +2,7 @@ import commonjs from '@rollup/plugin-commonjs';
 import glslify from 'rollup-plugin-glslify';
 import resolve from '@rollup/plugin-node-resolve';
 import copy from "rollup-plugin-copy";
+import {wasm} from "@rollup/plugin-wasm";
 
 
 export default {
@@ -19,9 +20,10 @@ export default {
         }
     ],
     plugins: [
+        wasm(),
         glslify(),
         resolve({
-            browser: true,
+            browser: false,
             preferBuiltins: false,
             dedupe: ['gl-matrix', 'axios', 'jpeg-js', 'fast-png']
         }),

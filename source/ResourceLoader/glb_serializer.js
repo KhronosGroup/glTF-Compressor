@@ -15,7 +15,8 @@ class GlbSerializer
         const chunkBuffersData = buffers.map(buffer => {
             return this.getChunkFromBuffer(buffer);
         })
-
+        console.log('buffers', buffers);
+        console.log('chunkBuffersData', chunkBuffersData);
         const jsonChunk = this.getChunkFromJsonString(gltf);
 
         const totalSizeBytes = /*Header*/ 3 * 4 + jsonChunk.byteLength + chunkBuffersData.reduce((acc, curr) => acc + curr.byteLength, 0);
@@ -57,6 +58,12 @@ class GlbSerializer
         header[0] = alignedBufferSize * 4 ;// buffer.byteLength;
         header[1] = 0x004E4942; // BIN
         new Uint8Array(chunk, 8).set(buffer);    
+        
+        console.log('buffer', buffer);
+        console.log('buffer.byteLength', buffer.byteLength);
+        console.log('chunk', chunk);
+        console.log('chunk.byteLength', chunk.byteLength);
+
         return chunk;
     }
 }

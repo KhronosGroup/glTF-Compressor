@@ -283,7 +283,17 @@ div .field.has-addons
 
 .b-slider.comparisonImageSlider .b-slider-thumb
 {
-    width:  2px;
+    width: 20px;
+    background: transparent;
+    border: transparent;
+}
+
+.custom-slider {
+    border: 1px solid hsl(0, 0%, 71%);
+    position: absolute;
+    border-radius: 9999px;
+    left: 50%;
+    height: 100%;
 }
 
 .b-slider.iblIntensitySlider
@@ -377,6 +387,24 @@ button.button
     height: 48px;
 }
 
+.modelCredit {
+    margin-top: 1.5rem;
+    margin-bottom: 1.5rem;
+    word-break: break-word;
+}
+.modelCreditBottom {
+    margin-top: 1.5rem;
+    margin-right: 1em;
+    margin-bottom: 1.5rem;
+    word-break: break-word;
+}
+@media (min-height: 768px) {
+    .modelCreditBottom {
+        position: absolute;
+        bottom: 0;
+    }
+}
+
 #gltf-sample-viewer-model-spinner {
     position: absolute;
     top: 0;
@@ -399,13 +427,13 @@ button.button
 }
 
 
-input[type="checkbox"] {
+.texture-checkbox {
     -webkit-appearance: none;
     position: relative;
     width: 100%;
     cursor: pointer;
   }
-  input[type="checkbox"]:after {
+.texture-checkbox:after {
     position: absolute;
     font-family: "Font Awesome 5 Free";
     font-weight: 400;
@@ -414,7 +442,26 @@ input[type="checkbox"] {
     color: #fff;
     left: 5px;
   }
-  input[type="checkbox"]:checked:after {
+  .texture-checkbox:checked:after {
+    font-weight: 900;
+    content: "\f14a";
+    color: #fff;
+  }
+
+  .tree-checkbox {
+    -webkit-appearance: none;
+    cursor: pointer;
+    margin: auto 0;
+  }
+
+  .tree-checkbox:after {
+    font-family: "Font Awesome 5 Free";
+    font-weight: 400;
+    content: "\f0c8";
+    font-size: 18px;
+    color: #fff;
+  }
+  .tree-checkbox:checked:after {
     font-weight: 900;
     content: "\f14a";
     color: #fff;
@@ -476,6 +523,28 @@ input[type="checkbox"] {
   .container tr:nth-child(odd){background-color: #000000;}
   .container tr:nth-child(even){background-color: #00000080;}
 
+  .container_geometry {
+    overflow-y: auto; 
+    max-height: 220px;
+  }
+
+  .container_geometry table {
+    width: 100%;
+    text-align: left;
+    table-layout: fixed;
+    font-size: small;
+  }
+
+  .container_geometry th, .container_geometry td {
+    border: 1px solid gray;
+    padding: 1px;
+    font-weight: normal;
+    font-size: smaller;
+  }
+
+  .container_geometry tr:nth-child(odd){background-color: #000000;}
+  .container_geometry tr:nth-child(even){background-color: #00000080;}
+  
   @keyframes spinner {
     0% {
       transform: translate3d(-50%, -50%, 0) rotate(0deg);
@@ -517,3 +586,53 @@ input[type="checkbox"] {
   .td_style{ 
     width: 75px;
   }
+
+.item-checkbox input[type="checkbox"] {
+    display:inline-block;
+}
+
+.item-checkbox input[type="checkbox"]:checked {
+    font-family: "Font Awesome 5 Free";
+    font-weight: 400;
+    content: "\f0c8";
+    font-size: 18px;
+    color: #fff;
+}
+
+.collapseArea {
+    border: solid $primary; 
+    border-width: thin; 
+    padding: 5px; 
+    margin-bottom: 5px;
+}
+
+.mesh_node_tree_container
+{
+    overflow-y: auto; 
+    height: 200px;
+    margin-bottom: 10px;
+}
+
+.mesh_node_tree {
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.divDropButton,
+.divDropButton:hover,
+.divDropButton:focus:not(:active),
+.divDropButton.is-focused:not(:active) {
+    background-color: inherit;
+    color: white;
+    width: 100%;
+    margin: 0;
+    display: block;
+    margin-bottom: 10px;
+    text-align: left;
+    outline: none;
+    box-shadow: none;
+}
+
+ul {
+    padding-left: 1em;
+}
