@@ -94,7 +94,7 @@ function clamp(number, min, max) {
 }
 
 function getIsGlb(filename) {
-    return getExtension(filename) == "glb";
+    return getExtension(filename) == "glb" || getExtension(filename) == "vrm";
 }
 
 function getIsGltf(filename) {
