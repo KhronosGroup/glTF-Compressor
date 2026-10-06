@@ -26,12 +26,16 @@ jobs:
           echo $SIZE
           if [[ $SIZE -gt 1573741824 ]]; then echo 'dist folder exceeds limit of 1.5GB! Aborting'; exit 1; fi
 
-      - name: Deploy to Khronos repo
-        continue-on-error: true # If no changes are commited this action fails
-        uses: JamesIves/github-pages-deploy-action@4.1.0
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
         with:
-          branch: main
-          folder: app_web/dist/
-          token: ${{ secrets.BUILD_GITHUB_PAGES }}
-          repository-name: KhronosGroup/glTF-Compressor-Release
-          target-folder: docs
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          # Build output to publish to the `gh-pages` branch:
+          publish_dir: ./app_web/dist
+          # The following lines assign commit authorship to the official
+          # GH-Actions bot for deploys to `gh-pages` branch:
+          # https://github.com/actions/checkout/issues/13#issuecomment-724415212
+          # The GH actions bot is used by default if you didn't specify the two fields.
+          # You can swap them out with your own user credentials.
+          user_name: github-actions[bot]
+          user_email: 41898282+github-actions[bot]@users.noreply.github.com

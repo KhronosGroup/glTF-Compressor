@@ -502,7 +502,7 @@ const getInputObservables = (inputElement, app) => {
     // Partition files into a .gltf or .glb and additional files like buffers and textures
     observables.droppedGltf = droppedFiles.pipe(
         map(files => ({
-            mainFile: files.find(([path]) => path.endsWith(".glb") || path.endsWith(".gltf")),
+            mainFile: files.find(([path]) => path.endsWith(".glb") || path.endsWith(".gltf") || path.endsWith(".vrm")),
             additionalFiles: files.filter(file => !file[0].endsWith(".glb") && !file[0].endsWith(".gltf"))
         })),
         filter(files => files.mainFile !== undefined),
